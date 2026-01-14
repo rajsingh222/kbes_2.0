@@ -10,6 +10,10 @@ const { GridFSBucket } = require('mongodb');
 require('dotenv').config();
 
 const app = express();
+
+// Trust proxy - CRITICAL for Render/Railway/Heroku to get real client IP
+app.set('trust proxy', true);
+
 app.use(express.json({ limit: '50mb' })); // Increased limit for PDF data
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 

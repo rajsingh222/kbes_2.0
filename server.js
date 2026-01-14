@@ -1,0 +1,2150 @@
+const express = require('express');
+const cors = require('cors');
+const axios = require('axios');
+const PDFDocument = require('pdfkit');
+const path = require('path');
+const fs = require('fs');
+const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
+const { GridFSBucket } = require('mongodb');
+require('dotenv').config();
+
+const app = express();
+app.use(express.json({ limit: '50mb' })); // Increased limit for PDF data
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// CORS configuration for production
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || '*',
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+
+// MongoDB Connection
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/osham_assessments';
+let gridFSBucket;
+
+// MongoDB connection options for better stability
+const mongooseOptions = {
+  serverSelectionTimeoutMS: 30000, // Increase timeout to 30 seconds
+  socketTimeoutMS: 45000,
+  family: 4 // Force IPv4
+};
+
+mongoose.connect(MONGODB_URI, mongooseOptions)
+.then(() => {
+  console.log('✅ MongoDB connected successfully');
+  console.log('📍 Database:', mongoose.connection.name);
+  // Initialize GridFS bucket for file storage
+  gridFSBucket = new GridFSBucket(mongoose.connection.db, {
+    bucketName: 'adminReports'
+  });
+  console.log('✅ GridFS bucket initialized');
+})
+.catch((err) => {
+  console.error('❌ MongoDB connection error:', err.message);
+  console.log('⚠️ Server will continue without database functionality');
+  console.log('💡 Tip: Check your MONGODB_URI in .env file');
+  console.log('💡 Tip: Ensure MongoDB Atlas allows your IP address');
+});
+
+// Import models and services
+const Assessment = require('./models/Assessment');
+const Payment = require('./models/Payment');
+const { sendAssessmentCompletionEmail, sendAdminNotificationEmail } = require('./services/emailService');
+const cloudinaryService = require('./services/cloudinaryService');
+
+// Import auth routes
+const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
+const paymentRoutes = require('./routes/payment');
+
+// JWT Secret
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+// Middleware to authenticate user token
+const authenticateToken = (req, res, next) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: 'No token provided',
+      requiresLogin: true
+    });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid or expired token',
+      requiresLogin: true
+    });
+  }
+};
+
+// Helper function to get IST timestamp
+function getISTTimestamp() {
+  const date = new Date();
+  // IST is UTC+5:30
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  return new Date(date.getTime() + istOffset);
+}
+
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+
+// Helper: generate PDF Buffer from report text and user details (server-side)
+async function generatePdfBufferFromReport(reportText, user_details) {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ 
+        size: 'A4', 
+        margins: { top: 50, bottom: 70, left: 60, right: 60 },
+        bufferPages: true
+      });
+
+      const chunks = [];
+      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('end', () => {
+        const result = Buffer.concat(chunks);
+        console.log('🔵 [PDF] Buffer created, size:', result.length, 'bytes');
+        resolve(result);
+      });
+      doc.on('error', (err) => {
+        console.error('❌ [PDF] PDFDocument error:', err);
+        reject(err);
+      });
+
+      const pageWidth = doc.page.width;
+      const leftMargin = 60;
+      const rightMargin = pageWidth - 60;
+
+      // Add title and metadata
+      doc.font('Helvetica-Bold').fontSize(20).fillColor('#003366');
+      doc.text('PRELIMINARY ASSESSMENT REPORT', leftMargin, 60, { width: rightMargin - leftMargin, align: 'center' });
+      doc.moveDown(1.5);
+
+      doc.font('Helvetica').fontSize(11).fillColor('#444444');
+      if (user_details && user_details.name) {
+        doc.text(`Name: ${user_details.name}`, { width: rightMargin - leftMargin });
+        doc.moveDown(0.5);
+      }
+      if (user_details && user_details.email) {
+        doc.text(`Email: ${user_details.email}`, { width: rightMargin - leftMargin });
+        doc.moveDown(0.5);
+      }
+      doc.moveDown(1);
+
+      // Clean and process report text with better markdown handling
+      const cleaned = String(reportText || '')
+        .replace(/\r/g, '');
+
+      console.log('🔵 [PDF] Report text length:', cleaned.length, 'characters');
+      
+      if (!cleaned || cleaned.trim().length === 0) {
+        console.warn('⚠️ [PDF] Report text is empty! Adding placeholder content.');
+        doc.font('Helvetica').fontSize(10).fillColor('#FF0000');
+        doc.text('No report content available. Please regenerate the assessment.', { 
+          width: rightMargin - leftMargin, 
+          align: 'left' 
+        });
+      } else {
+        // Split by double newlines to preserve paragraphs
+        const sections = cleaned.split(/\n\n+/);
+        console.log('🔵 [PDF] Processing', sections.length, 'sections');
+        
+        for (const section of sections) {
+          const text = section.trim();
+          if (!text) continue;
+          
+          // Check if we need a new page (leave 120px margin at bottom)
+          if (doc.y > doc.page.height - 120) {
+            doc.addPage();
+          }
+          
+          // Handle main section headers (like "1. OVERVIEW", "2. KEY OBSERVATIONS")
+          if (text.match(/^\d+\.\s+[A-Z\s]+$/)) {
+            doc.font('Helvetica-Bold').fontSize(14).fillColor('#003366');
+            doc.text(text, { width: rightMargin - leftMargin, align: 'left' });
+            doc.moveDown(0.8);
+            continue;
+          }
+          
+          // Handle subheadings with ** or ending with : (like "**Structural Cracks:**" or "Structural Cracks:")
+          if (text.match(/^\*\*[^*]+\*\*:?$/) || text.match(/^[A-Z][^:]+:$/)) {
+            doc.font('Helvetica-Bold').fontSize(12).fillColor('#003366');
+            const headerText = text.replace(/\*\*/g, '').replace(/^#+\s*/, '');
+            doc.text(headerText, { width: rightMargin - leftMargin, align: 'left' });
+            doc.moveDown(0.5);
+            continue;
+          }
+          
+          // Handle bullet points - always regular black text
+          if (text.match(/^[\-\*\•]/)) {
+            doc.font('Helvetica').fontSize(10).fillColor('#222222');
+            const bulletText = text.replace(/^[\-\*\•]\s*/, '• ').replace(/\*\*(.+?)\*\*/g, '$1');
+            doc.text(bulletText, { 
+              width: rightMargin - leftMargin - 20, 
+              align: 'left',
+              indent: 20,
+              lineGap: 4
+            });
+            doc.moveDown(0.3);
+            continue;
+          }
+          
+          // Regular paragraphs - always black text
+          doc.font('Helvetica').fontSize(10).fillColor('#222222');
+          const cleanText = text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/\*(.+?)\*/g, '$1');
+          doc.text(cleanText, { 
+            width: rightMargin - leftMargin, 
+            align: 'justify', 
+            lineGap: 5
+          });
+          doc.moveDown(0.6);
+        }
+      }
+
+      doc.end();
+    } catch (err) {
+      console.error('❌ [PDF] generatePdfBufferFromReport error:', err);
+      reject(err);
+    }
+  });
+}
+
+// Generate mock report for testing (fallback)
+function generateMockReport(user_details, assessment_responses) {
+  // Unwrap the raw responses if they are wrapped
+  const actualResponses = assessment_responses.raw_responses || assessment_responses;
+  
+  const severity = (actualResponses.q9_rcc_corrosion_has === 'Yes' || 
+                   actualResponses.q8a_damp_has === 'Yes' ||
+                   actualResponses.q6_rcc_has_cracks === 'Yes') ? 'Fair' : 'Good';
+  
+  const buildingAge = actualResponses.q1_age || 'Unknown';
+  const location = actualResponses.q1_city || 'Not specified';
+  const structuralSystem = actualResponses.q5_structural_system || 'Not specified';
+  const buildingUsage = actualResponses.q2_usage || 'Not specified';
+  
+  return `PRELIMINARY BUILDING ASSESSMENT REPORT
+Generated: ${new Date().toLocaleDateString('en-IN')}
+Assessed by: Licensed Structural Engineer
+
+1. OVERVIEW
+Overall Health Rating: ${severity}
+This ${buildingAge}-year-old ${buildingUsage.toLowerCase()} building with ${structuralSystem} structural system located in ${location} has been assessed through a preliminary visual inspection and questionnaire-based assessment. The building shows signs of age-related deterioration typical for structures in this environment. Overall structural health is rated as ${severity}, with several observations requiring attention. Immediate professional detailed investigation is recommended as per IS 13935:2009 guidelines.
+
+2. KEY OBSERVATIONS
+The following conditions have been identified during the preliminary assessment:
+
+• Structural Elements: ${assessment_responses.crack_elements || assessment_responses.crack_element || 'Various structural elements'} showing signs of distress with ${assessment_responses.crack_orientation || assessment_responses.crack_shape || 'multiple'} patterns observed at ${assessment_responses.crack_location || 'various locations'}. This requires immediate detailed assessment to determine severity and structural implications.
+
+• Material Deterioration: Concrete surfaces ${assessment_responses.spalling ? `showing spalling in ${assessment_responses.spalling}` : 'show age-related degradation'}. ${assessment_responses.efflorescence === 'Yes' || assessment_responses.efflorescence_type === 'Yes' ? 'Efflorescence deposits indicate moisture ingress and potential reinforcement corrosion.' : 'Material condition requires monitoring.'}
+
+• Moisture-Related Issues: ${assessment_responses.damp === 'Yes' || assessment_responses.damp_type === 'Yes' ? `Damp patches observed ${assessment_responses.damp_details || 'in multiple areas'}, indicating water infiltration that can accelerate reinforcement corrosion and concrete deterioration.` : 'No significant moisture issues observed, but periodic monitoring recommended.'}
+
+• Corrosion Indicators: ${assessment_responses.rust_marks === 'Yes' || assessment_responses.corrosion_signs ? `Rust staining and corrosion signs detected ${assessment_responses.corrosion_location ? `at ${assessment_responses.corrosion_location}` : ''}, suggesting reinforcement corrosion that may impact load-bearing capacity.` : 'No visible corrosion indicators at present.'}
+
+• Structural Deformations: ${assessment_responses.structural_tilt === 'Yes' ? `Structural tilting observed ${assessment_responses.tilt_location ? `in ${assessment_responses.tilt_location}` : ''}, requiring immediate investigation for foundation settlement or structural distress.` : 'No significant structural deformations observed.'}
+
+• Environmental Exposure: Building exposed to ${assessment_responses.environmental_exposure_type || assessment_responses.q3_exposure_type || 'normal'} environmental conditions, which affects deterioration rate and maintenance requirements.
+
+3. RISK SUMMARY
+
+CRITICAL/HIGH RISK (Immediate Attention - 0-1 month):
+${assessment_responses.structural_tilt === 'Yes' ? '• Structural tilting requires immediate engineering investigation\n' : ''}${assessment_responses.corrosion_signs || assessment_responses.rust_marks === 'Yes' ? '• Active reinforcement corrosion may compromise structural capacity\n' : ''}${severity === 'Fair' ? '• Multiple deterioration indicators require urgent detailed assessment\n' : ''}• Detailed Structural Audit as per IS 13935:2009 must be commissioned immediately
+
+MEDIUM RISK (Prompt Attention - 1-6 months):
+• ${assessment_responses.damp === 'Yes' || assessment_responses.damp_type === 'Yes' ? 'Moisture ingress issues must be addressed to prevent further deterioration\n' : ''}• ${assessment_responses.efflorescence === 'Yes' || assessment_responses.efflorescence_type === 'Yes' ? 'Efflorescence treatment and waterproofing required\n' : ''}• Non-Destructive Testing (NDT) to assess concrete strength and reinforcement condition
+• Repair of identified cracks and spalling with proper materials
+
+LOW RISK (Monitoring/Maintenance - 6-24 months):
+• Establish periodic inspection schedule (6-monthly intervals)
+• Preventive maintenance program for building protection
+• Regular cleaning and minor maintenance works
+• Documentation of building condition over time
+
+4. TECHNICAL ASSESSMENT
+
+Structural Integrity: The ${buildingAge}-year-old building with ${structuralSystem} shows age-appropriate deterioration. Based on observed indicators including ${assessment_responses.crack_elements || assessment_responses.crack_element || 'structural cracks'}, the structure requires comprehensive engineering evaluation. Load-bearing capacity assessment through NDT methods (Rebound Hammer, Ultrasonic Pulse Velocity, Core Testing) is essential as per IS 456:2000 to determine residual safety factors.
+
+Seismic Vulnerability: Building location and age suggest evaluation against current IS 1893:2016 seismic code requirements. ${structuralSystem} structures of this age may not meet modern ductility detailing provisions. Seismic strengthening assessment required, particularly considering ${assessment_responses.floors_added === 'Yes' ? 'additional floors added which increase seismic mass and demands' : 'current code provisions for structural integrity'}.
+
+Material Condition & Deterioration: ${assessment_responses.environmental_exposure_type || assessment_responses.q3_exposure_type ? `Exposure to ${assessment_responses.environmental_exposure_type || assessment_responses.q3_exposure_type} environment` : 'Environmental exposure'} accelerates concrete carbonation and chloride-induced corrosion. ${assessment_responses.efflorescence === 'Yes' || assessment_responses.efflorescence_type === 'Yes' ? 'Efflorescence indicates active moisture movement and early-stage deterioration mechanisms.' : ''} Expected service life extension requires immediate intervention to arrest deterioration. Cover adequacy testing and chloride content analysis recommended.
+
+5. RECOMMENDATIONS
+
+IMMEDIATE ACTIONS (0-3 months):
+• Commission Detailed Structural Audit as per IS 13935:2009 by Licensed Structural Engineer
+• Conduct comprehensive Non-Destructive Testing (NDT):
+  - Rebound Hammer Test for concrete strength assessment
+  - Ultrasonic Pulse Velocity (UPV) for internal defect detection
+  - Half-Cell Potential Test for reinforcement corrosion mapping
+  - Cover meter survey for reinforcement location and cover adequacy
+  - Core testing if significant strength degradation suspected
+• Establish structural monitoring protocol for identified critical issues
+• Implement temporary safety measures for high-risk areas if any
+• Restrict usage/loading if structural concerns are significant
+
+SHORT-TERM ACTIONS (3-12 months):
+• Execute structural repairs based on detailed audit findings:
+  - Crack injection or stitching for structural cracks
+  - Spalling repair with polymer-modified repair mortars
+  - Corrosion protection treatment for exposed reinforcement
+  - Concrete restoration using IS 15477 compliant materials
+• Install comprehensive waterproofing system to prevent moisture ingress
+• Improve drainage systems to divert water away from structure
+• Apply protective coatings to reduce carbonation rate
+• Address any code compliance deficiencies identified
+• Implement recommended seismic strengthening measures if required
+
+LONG-TERM ACTIONS (1-5 years):
+• Establish Preventive Maintenance Schedule:
+  - Six-monthly visual inspections by building maintenance team
+  - Annual professional structural inspection by qualified engineer
+  - Periodic NDT testing (every 2-3 years) to track deterioration
+• Consider installation of Structural Health Monitoring System (SHMS) for critical elements
+• Maintain detailed records of all inspections, repairs and  modifications
+• Plan for major rehabilitation or retrofit works as building ages
+• Review and update structural assessment every 3-5 years
+• Ensure compliance with Building Bye-laws and Safety Regulations
+
+6. CONCLUSION
+
+Based on this preliminary assessment, the building is rated as being in ${severity} structural condition. ${severity === 'Fair' ? 'Several concerning indicators require immediate professional attention. The building shows signs of deterioration that could progress to critical levels if not addressed promptly.' : 'While no immediate critical issues are apparent, the building requires ongoing monitoring and maintenance.'} 
+
+Most Critical Requirement: Immediate commissioning of Detailed Structural Assessment as per IS 13935:2009 (Code of Practice for Detailed Assessment) by a Licensed Structural Engineer with expertise in building diagnostics. This comprehensive audit will establish actual structural condition, safety margins and  definitive repair/strengthening requirements.
+
+Expected Service Life: With timely implementation of recommended interventions, the building's service life can be extended by 20-30 years. Without action, deterioration will accelerate, potentially leading to ${severity === 'Fair' ? 'structural distress within 3-5 years' : 'significant issues within 5-10 years'}.
+
+Timeline Imperative: Detailed audit must commence within 30 days. Delay in implementing recommendations may result in:
+• Accelerated deterioration requiring more extensive (and expensive) repairs
+• Progressive loss of structural capacity and safety margins
+• Potential building usage restrictions or occupancy limitations
+• Non-compliance with building safety regulations
+
+This preliminary report provides initial guidance only. Final decisions on repairs, strengthening and  building usage must be based on the comprehensive Detailed Structural Assessment as per IS 13935:2009 standards.
+
+Disclaimer: This preliminary assessment is based on questionnaire responses and visible observations. Actual structural condition can only be determined through detailed engineering investigation with NDT methods and structural analysis. This report does not substitute for professional detailed assessment.`;
+}
+
+// Endpoint to generate building health report
+app.post('/api/generate-building-report', async (req, res) => {
+  try {
+    console.log('Incoming /api/generate-building-report body keys:', Object.keys(req.body || {}));
+    const user_details = req.body.user_details || req.body.userDetails || {};
+    const assessment_responses = req.body.assessment_responses || req.body.assessmentResponses;
+
+    if (!assessment_responses) {
+      return res.status(400).json({ error: 'Missing assessment responses' });
+    }
+
+    // Unwrap the raw responses if they are wrapped
+    const actualResponses = assessment_responses.raw_responses || assessment_responses;
+
+    let report;
+    let usedMock = false;
+    let groqDebug = null;
+
+    // Use GROQ API if key is available, otherwise use mock
+    if (GROQ_API_KEY) {
+      console.log('Using GROQ API for report generation...');
+      console.log('📊 Unwrapped Data Sample:');
+      console.log('  - Age:', actualResponses.q1_age);
+      console.log('  - City:', actualResponses.q1_city);
+      console.log('  - Cracks:', actualResponses.q6_rcc_has_cracks);
+      console.log('  - Crack Elements:', actualResponses.q6_rcc_crack_elements);
+      console.log('  - Vibration:', actualResponses.q13_rcc_vibration);
+      console.log('  - Vibration Sources:', actualResponses.q13_rcc_vibration_sources);
+      
+      // Build concise data summary for the AI
+      // Normalize keys: prefer Load-Bearing (`_lb_`) when present, otherwise use RCC keys
+      const pick = (obj, ...keys) => {
+        for (const k of keys) {
+          if (typeof obj[k] !== 'undefined' && obj[k] !== null && obj[k] !== '') return obj[k];
+        }
+        return undefined;
+      };
+
+      const q = {
+        age: pick(actualResponses, 'q1_age', 'q1_age'),
+        city: pick(actualResponses, 'q1_city', 'q1_city'),
+        country: pick(actualResponses, 'q1_country', 'q1_country'),
+        usage: pick(actualResponses, 'q2_usage', 'q2_usage'),
+        system: pick(actualResponses, 'q5_structural_system', 'q5_structural_system'),
+        storeysAbove: pick(actualResponses, 'q1_storeys_above', 'q1_storeys_above'),
+        storeysBelow: pick(actualResponses, 'q1_storeys_below', 'q1_storeys_below'),
+        exposure: pick(actualResponses, 'q3_exposure_type', 'q3_exposure_type'),
+
+        // Cracks
+        q6_has_cracks: pick(actualResponses, 'q6_rcc_has_cracks', 'q6_lb_has_cracks'),
+        q6_crack_elements: pick(actualResponses, 'q6_rcc_crack_elements', 'q6_lb_crack_elements'),
+        q6_crack_orientation: pick(actualResponses, 'q6_rcc_crack_orientation', 'q6_lb_wall_orientations', 'q6_lb_lintel_orientations'),
+        q6_crack_location: pick(actualResponses, 'q6_rcc_crack_location', 'q6_lb_wall_locations', 'q6_lb_lintel_locations', 'q6_lb_junction_locations'),
+        q6_deformation: pick(actualResponses, 'q6_rcc_deformation', 'q6_lb_deformation'),
+        q6_deformation_elements: pick(actualResponses, 'q6_rcc_deformation_elements', 'q6_lb_deformation_elements'),
+
+        // Spalling
+        q7_spalling_has: pick(actualResponses, 'q7_rcc_spalling_has', 'q7_lb_spalling_has'),
+        q7_spalling: pick(actualResponses, 'q7_rcc_spalling', 'q7_lb_spalling'),
+
+        // Moisture / patches
+        q8a_damp_has: pick(actualResponses, 'q8a_damp_has', 'q8a_lb_damp_has'),
+        q8a_damp_elements: pick(actualResponses, 'q8a_damp_elements', 'q8a_lb_damp_elements'),
+        q8b_white_has: pick(actualResponses, 'q8b_white_has', 'q8b_lb_white_has'),
+        q8b_white_elements: pick(actualResponses, 'q8b_white_elements', 'q8b_lb_white_elements'),
+        q8c_green_has: pick(actualResponses, 'q8c_green_has', 'q8c_lb_green_has'),
+        q8c_green_elements: pick(actualResponses, 'q8c_green_elements', 'q8c_lb_green_elements'),
+        q8d_brown_has: pick(actualResponses, 'q8d_lb_brown_has', 'q8d_lb_brown_has'),
+
+        // Corrosion
+        q9_corrosion_has: pick(actualResponses, 'q9_rcc_corrosion_has', 'q9_lb_corrosion_has'),
+        q9_corrosion_elements: pick(actualResponses, 'q9_rcc_corrosion_elements', 'q9_lb_corrosion_elements'),
+
+        // Vibration
+        q13_vibration: pick(actualResponses, 'q13_rcc_vibration', 'q10_lb_vibration_has', 'q13_rcc_vibration'),
+        q13_vibration_sources: pick(actualResponses, 'q13_rcc_vibration_sources', 'q10_lb_vibration_sources'),
+
+        // Floors/ground/disaster
+        q4_floors_added: pick(actualResponses, 'q4_floors_added', 'q4_floors_added'),
+        q4_floors_details: pick(actualResponses, 'q4_floors_details', 'q4_floors_details'),
+        q11_ground_issues_has: pick(actualResponses, 'q11_ground_issues_has', 'q11_lb_ground_issues_has'),
+        q11_ground_issues: pick(actualResponses, 'q11_ground_issues', 'q11_lb_ground_issues'),
+        q11_soil_types: pick(actualResponses, 'q11_soil_types', 'q11_lb_soil_types'),
+        q12_disaster_has: pick(actualResponses, 'q12_disaster_has', 'q12_lb_disaster_has'),
+        q12_disaster_types: pick(actualResponses, 'q12_disaster_types', 'q12_lb_disaster_types'),
+        q13_expert_intervention_has: pick(actualResponses, 'q13_expert_intervention_has', 'q13_lb_expert_intervention_has'),
+        q13_expert_intervention_types: pick(actualResponses, 'q13_expert_intervention_types', 'q13_lb_expert_intervention_types')
+      };
+
+      const buildingSummary = `Age: ${q.age || 'N/A'}y | Location: ${q.city || 'N/A'}, ${q.country || 'N/A'} | Type: ${Array.isArray(q.usage) ? q.usage.join(', ') : q.usage || 'N/A'} | System: ${q.system || 'N/A'} | Storeys: ${q.storeysAbove || ''}+${q.storeysBelow || ''} | Exposure: ${q.exposure || 'N/A'}`;
+      
+      const issuesList = [];
+      if (q.q6_has_cracks === 'Yes') {
+        issuesList.push(`CRACKS in ${(Array.isArray(q.q6_crack_elements) ? q.q6_crack_elements.join(', ') : q.q6_crack_elements || '')} - ${(Array.isArray(q.q6_crack_orientation) ? q.q6_crack_orientation.join(', ') : q.q6_crack_orientation || '')} at ${(Array.isArray(q.q6_crack_location) ? q.q6_crack_location.join(', ') : q.q6_crack_location || '')}`);
+      }
+      if (q.q7_spalling_has === 'Yes') {
+        issuesList.push(`SPALLING in ${(Array.isArray(q.q7_spalling) ? q.q7_spalling.join(', ') : q.q7_spalling || '')}`);
+      }
+      if (q.q8a_damp_has === 'Yes') {
+        issuesList.push(`DAMP in ${(Array.isArray(q.q8a_damp_elements) ? q.q8a_damp_elements.join(', ') : q.q8a_damp_elements || '')}`);
+      }
+      if (q.q8b_white_has === 'Yes') {
+        issuesList.push(`EFFLORESCENCE in ${(Array.isArray(q.q8b_white_elements) ? q.q8b_white_elements.join(', ') : q.q8b_white_elements || '')}`);
+      }
+      if (q.q9_corrosion_has === 'Yes') {
+        issuesList.push(`CORROSION in ${(Array.isArray(q.q9_corrosion_elements) ? q.q9_corrosion_elements.join(', ') : q.q9_corrosion_elements || '')}`);
+      }
+      if (q.q13_vibration === 'Yes') {
+        issuesList.push(`VIBRATION from ${(Array.isArray(q.q13_vibration_sources) ? q.q13_vibration_sources.join(', ') : q.q13_vibration_sources || '')}`);
+      }
+      if (q.q4_floors_added === 'Yes') {
+        issuesList.push(`ADDED FLOORS: ${q.q4_floors_details || 'floors added after construction'}`);
+      }
+      if (q.q11_ground_issues_has === 'Yes') {
+        issuesList.push(`GROUND ISSUES: ${(Array.isArray(q.q11_ground_issues) ? q.q11_ground_issues.join(', ') : q.q11_ground_issues || '')}`);
+      }
+      if (q.q12_disaster_has === 'Yes') {
+        issuesList.push(`DISASTER HISTORY: ${(Array.isArray(q.q12_disaster_types) ? q.q12_disaster_types.join(', ') : q.q12_disaster_types || '')}`);
+      }
+      
+      const issuesText = issuesList.length > 0 ? issuesList.join(' | ') : 'No major issues reported';
+      
+      // BUILD COMPREHENSIVE DETAILED DATA STRING - SEND ONLY RELEVANT RESPONSES BASED ON USER'S STRUCTURAL SYSTEM SELECTION
+      const formatValue = (val) => {
+        if (val === null || val === undefined || val === '') return 'Not specified';
+        if (Array.isArray(val)) return val.length > 0 ? val.join(', ') : 'Not specified';
+        return String(val);
+      };
+
+      // Determine which structural system was selected by the user
+      const structuralSystem = actualResponses.q5_structural_system || actualResponses.q2_structural_system || '';
+      const isLoadBearing = structuralSystem.toLowerCase().includes('load bearing');
+      const isRCC = structuralSystem.toLowerCase().includes('rcc') || structuralSystem.toLowerCase().includes('frame');
+
+      console.log('🔍 Structural System Selected:', structuralSystem);
+      console.log('🔍 Is Load Bearing:', isLoadBearing);
+      console.log('🔍 Is RCC Frame:', isRCC);
+
+      // Filter response keys based on structural system selection
+      const allKeys = Object.keys(actualResponses).sort();
+      const relevantKeys = allKeys.filter(key => {
+        // Always include generic fields (q1, q2, q3, q4, q5, etc.)
+        if (!key.includes('_rcc_') && !key.includes('_lb_')) return true;
+        
+        // If Load Bearing selected, include only _lb_ keys
+        if (isLoadBearing && key.includes('_lb_')) return true;
+        
+        // If RCC selected, include only _rcc_ keys (or keys without system suffix for backward compatibility)
+        if (isRCC && (key.includes('_rcc_') || (!key.includes('_lb_') && (key.startsWith('q6_') || key.startsWith('q7_') || key.startsWith('q8') || key.startsWith('q9_') || key.startsWith('q1'))))) return true;
+        
+        return false;
+      });
+
+      const relevantResponsesFormatted = relevantKeys.map(key => {
+        const value = actualResponses[key];
+        if (value === null || value === undefined || value === '') return null;
+        return `${key}: ${formatValue(value)}`;
+      }).filter(Boolean).join('\n');
+
+      console.log('📊 Total response keys:', allKeys.length);
+      console.log('📊 Relevant response keys sent to AI:', relevantKeys.length);
+
+      const comprehensiveBuildingData = `
+=== USER SELECTED RESPONSES (RELEVANT TO ${structuralSystem.toUpperCase()}) ===
+${relevantResponsesFormatted}
+
+=== BUILDING BASELINE DATA ===
+Age: ${formatValue(actualResponses.q1_age)} years (Range: ${formatValue(actualResponses.q1_ageRange)})
+Location: ${formatValue(actualResponses.q1_city)}${actualResponses.q1_city_other ? ` (Custom: ${actualResponses.q1_city_other})` : ''}, ${formatValue(actualResponses.q1_country)}${actualResponses.q1_country_other ? ` (Custom: ${actualResponses.q1_country_other})` : ''}
+Building Height: ${formatValue(actualResponses.q1_storeys_above)} storeys above ground, ${formatValue(actualResponses.q1_storeys_below)} storeys below ground
+Building Type/Usage: ${formatValue(actualResponses.q2_usage)}${actualResponses.q2_usage_other ? ` (Custom: ${actualResponses.q2_usage_other})` : ''}
+Structural System: ${formatValue(actualResponses.q5_structural_system)}
+Environmental Exposure: ${formatValue(actualResponses.q3_exposure_type)}${actualResponses.q3_exposure_other ? ` (Custom: ${actualResponses.q3_exposure_other})` : ''}
+
+=== STRUCTURAL MODIFICATIONS ===
+Additional Floors Added: ${formatValue(actualResponses.q4_floors_added)}${actualResponses.q4_floors_added === 'Yes' ? ` - Details: ${formatValue(actualResponses.q4_floors_details)}` : ''}
+Floors Added After Construction: ${formatValue(actualResponses.q4_floors_added_after)}
+Heavy Machinery Installed: ${formatValue(actualResponses.q4_heavy_machinery)}
+
+=== DETAILED STRUCTURAL OBSERVATIONS (Q6-Q13) - ${isLoadBearing ? 'LOAD BEARING MASONRY' : isRCC ? 'RCC FRAME' : 'GENERAL'} ===
+
+${isLoadBearing ? `
+Q6 - STRUCTURAL DISTRESS (CRACKS & DEFORMATION - LOAD BEARING MASONRY):
+Has Cracks: ${formatValue(actualResponses.q6_lb_has_cracks)}
+${actualResponses.q6_lb_has_cracks === 'Yes' ? `Crack Elements: ${formatValue(actualResponses.q6_lb_crack_elements)}${actualResponses.q6_lb_crack_elements_other ? ` | Custom: ${actualResponses.q6_lb_crack_elements_other}` : ''}
+Wall Crack Locations: ${formatValue(actualResponses.q6_lb_wall_locations)}${actualResponses.q6_lb_wall_locations_other ? ` | Custom: ${actualResponses.q6_lb_wall_locations_other}` : ''}
+Wall Crack Orientations: ${formatValue(actualResponses.q6_lb_wall_orientations)}${actualResponses.q6_lb_wall_orientations_other ? ` | Custom: ${actualResponses.q6_lb_wall_orientations_other}` : ''}
+Lintel Crack Locations: ${formatValue(actualResponses.q6_lb_lintel_locations)}${actualResponses.q6_lb_lintel_locations_other ? ` | Custom: ${actualResponses.q6_lb_lintel_locations_other}` : ''}
+Lintel Crack Orientations: ${formatValue(actualResponses.q6_lb_lintel_orientations)}${actualResponses.q6_lb_lintel_orientations_other ? ` | Custom: ${actualResponses.q6_lb_lintel_orientations_other}` : ''}
+Junction Crack Locations: ${formatValue(actualResponses.q6_lb_junction_locations)}${actualResponses.q6_lb_junction_locations_other ? ` | Custom: ${actualResponses.q6_lb_junction_locations_other}` : ''}
+Junction Crack Orientations: ${formatValue(actualResponses.q6_lb_junction_orientations)}${actualResponses.q6_lb_junction_orientations_other ? ` | Custom: ${actualResponses.q6_lb_junction_orientations_other}` : ''}` : ''}
+Has Deformation/Instability: ${formatValue(actualResponses.q6_lb_deformation)}
+${actualResponses.q6_lb_deformation === 'Yes' ? `Deformation Type: ${formatValue(actualResponses.q6_lb_deformation_type)}${actualResponses.q6_lb_deformation_type_other ? ` | Custom: ${actualResponses.q6_lb_deformation_type_other}` : ''}
+Bulging Locations: ${formatValue(actualResponses.q6_lb_deform_bulging_locations)}${actualResponses.q6_lb_deform_bulging_locations_other ? ` | Custom: ${actualResponses.q6_lb_deform_bulging_locations_other}` : ''}
+Tilting/Leaning Locations: ${formatValue(actualResponses.q6_lb_deform_tilting_locations)}${actualResponses.q6_lb_deform_tilting_locations_other ? ` | Custom: ${actualResponses.q6_lb_deform_tilting_locations_other}` : ''}
+Sagging Locations: ${formatValue(actualResponses.q6_lb_deform_sagging_locations)}${actualResponses.q6_lb_deform_sagging_locations_other ? ` | Custom: ${actualResponses.q6_lb_deform_sagging_locations_other}` : ''}` : ''}
+
+Q7 - MATERIAL DETERIORATION (SPALLING - LOAD BEARING MASONRY):
+Has Spalling: ${formatValue(actualResponses.q7_lb_spalling_has)}
+${actualResponses.q7_lb_spalling_has === 'Yes' ? `Spalling Locations: ${formatValue(actualResponses.q7_lb_spalling)}${actualResponses.q7_lb_spalling_other ? ` | Custom: ${actualResponses.q7_lb_spalling_other}` : ''}` : ''}
+
+Q8 - MOISTURE & SURFACE OBSERVATIONS (LOAD BEARING MASONRY):
+a) Damp/Wet Patches: ${actualResponses.q8a_lb_damp_has === 'Yes' ? 'YES - Elements: ' + formatValue(actualResponses.q8a_lb_damp_elements) + (actualResponses.q8a_lb_damp_elements_other ? ` | Custom: ${actualResponses.q8a_lb_damp_elements_other}` : '') : 'No'}
+b) White Patches/Efflorescence: ${actualResponses.q8b_lb_white_has === 'Yes' ? 'YES - Elements: ' + formatValue(actualResponses.q8b_lb_white_elements) + (actualResponses.q8b_lb_white_elements_other ? ` | Custom: ${actualResponses.q8b_lb_white_elements_other}` : '') : 'No'}
+c) Green Patches/Algae/Moss: ${actualResponses.q8c_lb_green_has === 'Yes' ? 'YES - Elements: ' + formatValue(actualResponses.q8c_lb_green_elements) + (actualResponses.q8c_lb_green_elements_other ? ` | Custom: ${actualResponses.q8c_lb_green_elements_other}` : '') : 'No'}
+d) Brown Patches/Water Stains: ${actualResponses.q8d_lb_brown_has === 'Yes' ? 'YES - Elements: ' + formatValue(actualResponses.q8d_lb_brown_elements) + (actualResponses.q8d_lb_brown_elements_other ? ` | Custom: ${actualResponses.q8d_lb_brown_elements_other}` : '') : 'No'}
+
+Q9 - CORROSION (LOAD BEARING MASONRY):
+Has Corrosion: ${formatValue(actualResponses.q9_lb_corrosion_has)}
+${actualResponses.q9_lb_corrosion_has === 'Yes' ? `Corrosion Elements: ${formatValue(actualResponses.q9_lb_corrosion_elements)}${actualResponses.q9_lb_corrosion_elements_other ? ` | Custom: ${actualResponses.q9_lb_corrosion_elements_other}` : ''}` : ''}
+
+Q10 - VIBRATION & DYNAMIC LOADING (LOAD BEARING MASONRY):
+User Feels Vibration: ${formatValue(actualResponses.q10_lb_vibration_has)}
+${actualResponses.q10_lb_vibration_has === 'Yes' ? `Vibration Sources: ${formatValue(actualResponses.q10_lb_vibration_sources)}${actualResponses.q10_lb_vibration_sources_other ? ` | Custom: ${actualResponses.q10_lb_vibration_sources_other}` : ''}` : ''}
+
+Q11 - FOUNDATION SOIL & GROUND CONDITIONS (LOAD BEARING MASONRY):
+Soil Types: ${formatValue(actualResponses.q11_lb_soil_types)}${actualResponses.q11_lb_soil_types_other ? ` | Custom: ${actualResponses.q11_lb_soil_types_other}` : ''}
+Ground Issues Present: ${formatValue(actualResponses.q11_lb_ground_issues_has)}
+${actualResponses.q11_lb_ground_issues_has === 'Yes' ? `Ground Issues: ${formatValue(actualResponses.q11_lb_ground_issues)}${actualResponses.q11_lb_ground_issues_other ? ` | Custom: ${actualResponses.q11_lb_ground_issues_other}` : ''}` : ''}
+
+Q12 - NATURAL DISASTERS & HAZARDOUS EVENTS (LOAD BEARING MASONRY):
+Disaster Experienced: ${formatValue(actualResponses.q12_lb_disaster_has)}
+${actualResponses.q12_lb_disaster_has === 'Yes' ? `Disaster Types: ${formatValue(actualResponses.q12_lb_disaster_types)}${actualResponses.q12_lb_disaster_types_other ? ` | Custom: ${actualResponses.q12_lb_disaster_types_other}` : ''}` : ''}
+
+Q13 - REMEDIAL MEASURES & EXPERT INTERVENTION (LOAD BEARING MASONRY):
+Expert Intervention Requested: ${formatValue(actualResponses.q13_lb_expert_intervention_has)}
+${actualResponses.q13_lb_expert_intervention_has === 'Yes' ? `Services Requested: ${formatValue(actualResponses.q13_lb_expert_intervention_types)}${actualResponses.q13_lb_expert_intervention_types_other ? ` | Custom: ${actualResponses.q13_lb_expert_intervention_types_other}` : ''}` : ''}
+Subscribed for Detailed Assessment: ${actualResponses.q13_subscribe_details ? 'Yes' : 'No'}
+` : ''}
+
+${isRCC ? `
+Q6 - STRUCTURAL DISTRESS (CRACKS & DEFORMATION - RCC FRAME):
+Has Cracks: ${formatValue(actualResponses.q6_rcc_has_cracks)}
+${actualResponses.q6_rcc_has_cracks === 'Yes' ? `Crack Elements: ${formatValue(actualResponses.q6_rcc_crack_elements)}${actualResponses.q6_rcc_crack_elements_other ? ` | Custom: ${actualResponses.q6_rcc_crack_elements_other}` : ''}
+Crack Orientations: ${formatValue(actualResponses.q6_rcc_crack_orientation)}${actualResponses.q6_rcc_crack_orientation_other ? ` | Custom: ${actualResponses.q6_rcc_crack_orientation_other}` : ''}
+Crack Locations: ${formatValue(actualResponses.q6_rcc_crack_location)}${actualResponses.q6_rcc_crack_location_other ? ` | Custom: ${actualResponses.q6_rcc_crack_location_other}` : ''}` : ''}
+Has Deformation/Instability: ${formatValue(actualResponses.q6_rcc_deformation)}
+${actualResponses.q6_rcc_deformation === 'Yes' ? `Deformation Elements: ${formatValue(actualResponses.q6_rcc_deformation_elements)}${actualResponses.q6_rcc_deformation_elements_other ? ` | Custom: ${actualResponses.q6_rcc_deformation_elements_other}` : ''}` : ''}
+
+Q7 - MATERIAL DETERIORATION (SPALLING - RCC FRAME):
+Has Spalling: ${formatValue(actualResponses.q7_rcc_spalling_has)}
+${actualResponses.q7_rcc_spalling_has === 'Yes' ? `Spalling Locations: ${formatValue(actualResponses.q7_rcc_spalling)}${actualResponses.q7_rcc_spalling_other ? ` | Custom: ${actualResponses.q7_rcc_spalling_other}` : ''}` : ''}
+
+Q8 - MOISTURE & SURFACE OBSERVATIONS (RCC FRAME):
+a) Damp/Wet Patches: ${actualResponses.q8a_damp_has === 'Yes' ? 'YES - Elements: ' + formatValue(actualResponses.q8a_damp_elements) + (actualResponses.q8a_damp_elements_other ? ` | Custom: ${actualResponses.q8a_damp_elements_other}` : '') : 'No'}
+b) White Patches/Efflorescence: ${actualResponses.q8b_white_has === 'Yes' ? 'YES - Elements: ' + formatValue(actualResponses.q8b_white_elements) + (actualResponses.q8b_white_elements_other ? ` | Custom: ${actualResponses.q8b_white_elements_other}` : '') : 'No'}
+c) Green Patches/Algae/Moss: ${actualResponses.q8c_green_has === 'Yes' ? 'YES - Elements: ' + formatValue(actualResponses.q8c_green_elements) + (actualResponses.q8c_green_elements_other ? ` | Custom: ${actualResponses.q8c_green_elements_other}` : '') : 'No'}
+
+Q9 - CORROSION (RCC FRAME):
+Has Corrosion: ${formatValue(actualResponses.q9_rcc_corrosion_has)}
+${actualResponses.q9_rcc_corrosion_has === 'Yes' ? `Corrosion Elements: ${formatValue(actualResponses.q9_rcc_corrosion_elements)}${actualResponses.q9_rcc_corrosion_elements_other ? ` | Custom: ${actualResponses.q9_rcc_corrosion_elements_other}` : ''}` : ''}
+
+Q10 - VIBRATION & DYNAMIC LOADING (RCC FRAME):
+User Feels Vibration: ${formatValue(actualResponses.q13_rcc_vibration)}
+${actualResponses.q13_rcc_vibration === 'Yes' ? `Vibration Sources: ${formatValue(actualResponses.q13_rcc_vibration_sources)}${actualResponses.q13_rcc_vibration_sources_other ? ` | Custom: ${actualResponses.q13_rcc_vibration_sources_other}` : ''}` : ''}
+
+Q11 - FOUNDATION SOIL & GROUND CONDITIONS (RCC FRAME):
+Soil Types: ${formatValue(actualResponses.q11_soil_types)}${actualResponses.q11_soil_types_other ? ` | Custom: ${actualResponses.q11_soil_types_other}` : ''}
+Ground Issues Present: ${formatValue(actualResponses.q11_ground_issues_has)}
+${actualResponses.q11_ground_issues_has === 'Yes' ? `Ground Issues: ${formatValue(actualResponses.q11_ground_issues)}${actualResponses.q11_ground_issues_other ? ` | Custom: ${actualResponses.q11_ground_issues_other}` : ''}` : ''}
+
+Q12 - NATURAL DISASTERS & HAZARDOUS EVENTS (RCC FRAME):
+Disaster Experienced: ${formatValue(actualResponses.q12_disaster_has)}
+${actualResponses.q12_disaster_has === 'Yes' ? `Disaster Types: ${formatValue(actualResponses.q12_disaster_types)}${actualResponses.q12_disaster_types_other ? ` | Custom: ${actualResponses.q12_disaster_types_other}` : ''}` : ''}
+
+Q13 - REMEDIAL MEASURES & EXPERT INTERVENTION (RCC FRAME):
+Expert Intervention Requested: ${formatValue(actualResponses.q13_expert_intervention_has)}
+${actualResponses.q13_expert_intervention_has === 'Yes' ? `Services Requested: ${formatValue(actualResponses.q13_expert_intervention_types)}${actualResponses.q13_expert_intervention_types_other ? ` | Custom: ${actualResponses.q13_expert_intervention_types_other}` : ''}` : ''}
+Subscribed for Detailed Assessment: ${actualResponses.q13_subscribe_details ? 'Yes' : 'No'}
+` : ''}
+`;
+      
+      const prompt = `You are a Licensed Professional Structural Engineer conducting a comprehensive building assessment.
+
+${comprehensiveBuildingData}
+
+CRITICAL INSTRUCTIONS:
+1. Use EXACTLY these 6 section headings (with numbers): 1. OVERVIEW, 2. KEY OBSERVATIONS, 3. RISK SUMMARY, 4. TECHNICAL ASSESSMENT, 5. RECOMMENDATIONS, 6. CONCLUSION
+2. Write a COMPREHENSIVE, DETAILED report (5000-7000 words minimum)
+3. **IMPORTANT: USE ALL THE BUILDING DATA PROVIDED ABOVE** - Every single field from Q1 to Q13, including all custom text entered by the user in "Other" fields. Reference specific ages, locations, elements, observations, custom responses throughout your report.
+4. Add proper spacing: TWO blank lines before each main section, ONE blank line between paragraphs
+5. Use **text** for bold headings and subsections
+6. Include bullet points (•) for lists with proper indentation
+7. For Load-Bearing Masonry assessments, focus on masonry-specific issues (wall cracks, lintels, junctions, bulging, tilting, etc.)
+8. Include every custom user input (marked as "Custom:" in the data) in your analysis
+
+Write each section as follows:
+
+**1. OVERVIEW**
+Write 5-6 detailed paragraphs (each 6-8 sentences) covering:
+- Building description: ${actualResponses.q1_age}-year-old ${actualResponses.q2_usage} building in ${actualResponses.q1_city}, ${actualResponses.q1_country}
+- Structural system: ${actualResponses.q5_structural_system} with ${actualResponses.q1_storeys_above} storeys above + ${actualResponses.q1_storeys_below} below
+- Environmental exposure: ${actualResponses.q3_exposure_type}
+- Overall health rating (Excellent/Good/Fair/Poor/Critical) with detailed justification
+- Urgency level (High/Medium/Low) based on findings
+- Summary of all key findings including vibration${actualResponses.q13_rcc_vibration === 'Yes' ? ' from ' + (Array.isArray(actualResponses.q13_rcc_vibration_sources) ? actualResponses.q13_rcc_vibration_sources.join(', ') : 'sources') : ''}, soil conditions, disaster history${actualResponses.q12_disaster_has === 'Yes' ? ' (' + (Array.isArray(actualResponses.q12_disaster_types) ? actualResponses.q12_disaster_types.join(', ') : 'disasters') + ')' : ''}
+
+**2. KEY OBSERVATIONS**
+Create detailed subsections for EACH observation category. Use format "**Subsection:**" followed by detailed bullet analysis:
+
+**Structural Cracks:**
+${actualResponses.q6_rcc_has_cracks === 'Yes' ? '• Detailed analysis of cracks in ' + (Array.isArray(actualResponses.q6_rcc_crack_elements) ? actualResponses.q6_rcc_crack_elements.join(', ') : 'elements') + '\n• Crack orientations: ' + (Array.isArray(actualResponses.q6_rcc_crack_orientation) ? actualResponses.q6_rcc_crack_orientation.join(', ') : 'patterns') + '\n• Locations: ' + (Array.isArray(actualResponses.q6_rcc_crack_location) ? actualResponses.q6_rcc_crack_location.join(', ') : 'areas') + '\n• Severity assessment and structural implications\n• Load path disruption and capacity concerns' : '• No cracks observed - good structural integrity maintained'}
+
+**Concrete Spalling & Cover Loss:**
+${actualResponses.q7_rcc_spalling_has === 'Yes' ? '• Spalling observed in ' + (Array.isArray(actualResponses.q7_rcc_spalling) ? actualResponses.q7_rcc_spalling.join(', ') : 'areas') + '\n• Reinforcement exposure and protection loss\n• Concrete deterioration mechanisms\n• Durability concerns and repair urgency' : '• No spalling observed - concrete cover intact'}
+
+**Moisture Infiltration & Water Damage:**
+• Damp patches: ${actualResponses.q8a_damp_has === 'Yes' ? 'YES in ' + (Array.isArray(actualResponses.q8a_damp_elements) ? actualResponses.q8a_damp_elements.join(', ') : 'elements') + ' - analyze water ingress paths' : 'None observed'}
+• Efflorescence (white deposits): ${actualResponses.q8b_white_has === 'Yes' ? 'YES in ' + (Array.isArray(actualResponses.q8b_white_elements) ? actualResponses.q8b_white_elements.join(', ') : 'elements') + ' - indicates moisture movement' : 'None observed'}
+• Algae/moss growth: ${actualResponses.q8c_green_has === 'Yes' ? 'YES on ' + (Array.isArray(actualResponses.q8c_green_elements) ? actualResponses.q8c_green_elements.join(', ') : 'surfaces') + ' - persistent dampness' : 'None observed'}
+
+**Reinforcement Corrosion:**
+${actualResponses.q9_rcc_corrosion_has === 'Yes' ? '• Corrosion evidence in ' + (Array.isArray(actualResponses.q9_rcc_corrosion_elements) ? actualResponses.q9_rcc_corrosion_elements.join(', ') : 'elements') + '\n• Chloride ingress and carbonation effects\n• Section loss and capacity reduction\n• Aggressive environmental exposure (' + (actualResponses.q3_exposure_type || 'conditions') + ')' : '• No visible corrosion - protective measures effective'}
+
+**Structural Deformations:**
+${actualResponses.q6_rcc_deformation === 'Yes' ? '• Deformation observed in ' + (Array.isArray(actualResponses.q6_rcc_deformation_elements) ? actualResponses.q6_rcc_deformation_elements.join(', ') : 'elements') + '\n• Deflection patterns and serviceability concerns\n• Potential foundation or load-related issues' : '• No abnormal deformations detected'}
+
+**Vibration & Dynamic Loading:**
+${actualResponses.q13_rcc_vibration === 'Yes' ? '• Vibration sources: ' + (Array.isArray(actualResponses.q13_rcc_vibration_sources) ? actualResponses.q13_rcc_vibration_sources.join(', ') : 'identified') + '\n• Frequency and amplitude analysis needed\n• Fatigue and cumulative damage assessment\n• Impact on structural integrity and occupant comfort\n• Crack propagation risk from cyclic loading\n• Mitigation measures required' : '• No significant vibration reported - static loading only'}
+
+**Foundation & Geotechnical Conditions:**
+• Soil types: ${Array.isArray(actualResponses.q11_soil_types) ? actualResponses.q11_soil_types.join(', ') : 'not specified'}
+${actualResponses.q11_ground_issues_has === 'Yes' ? '• Ground issues present: ' + (Array.isArray(actualResponses.q11_ground_issues) ? actualResponses.q11_ground_issues.join(', ') : 'concerns') + '\n• Bearing capacity concerns\n• Settlement and differential movement\n• Foundation investigation required' : '• No ground stability issues reported'}
+
+**Natural Disaster Exposure:**
+${actualResponses.q12_disaster_has === 'Yes' ? '• Building experienced: ' + (Array.isArray(actualResponses.q12_disaster_types) ? actualResponses.q12_disaster_types.join(', ') : 'disasters') + '\n• Post-disaster structural assessment critical\n• Residual capacity and hidden damage concerns\n• Strengthening and retrofitting needs' : '• No disaster history - assess preparedness for future events'}
+
+${actualResponses.q4_floors_added === 'Yes' ? '**Structural Modifications:**\n• Additional floors: ' + (actualResponses.q4_floors_details || 'added after original construction') + '\n• Increased dead and live loads on existing structure\n• Original design capacity may be exceeded\n• Structural adequacy verification required' : ''}
+
+**3. RISK SUMMARY**
+Categorize ALL findings by urgency. Use clear formatting:
+
+**CRITICAL/HIGH RISK (Immediate Action - 0-1 month):**
+• [List all urgent safety issues]
+${actualResponses.q12_disaster_has === 'Yes' ? '• Post-disaster structural damage requiring immediate assessment' : ''}
+${actualResponses.q11_ground_issues_has === 'Yes' ? '• Foundation and ground stability concerns' : ''}
+${actualResponses.q13_rcc_vibration === 'Yes' ? '• Severe vibration affecting structural integrity' : ''}
+• [Exposed reinforcement, active corrosion, capacity concerns]
+
+**MEDIUM RISK (Prompt Action - 1-6 months):**
+• [List important deterioration issues]
+• [Progressive spalling, corrosion, serviceability concerns]
+• [Water ingress requiring waterproofing]
+
+**LOW RISK (Monitoring & Maintenance - 6-24 months):**
+• [List maintenance items and preventive measures]
+• [Minor cosmetic issues, periodic inspections]
+
+**4. TECHNICAL ASSESSMENT**
+Write 6-7 comprehensive technical paragraphs (each 7-9 sentences):
+
+Paragraph 1 - Structural Integrity Analysis: Discuss load-carrying capacity of ${actualResponses.q1_age}-year-old ${actualResponses.q5_structural_system} system, safety factors per IS 456:2000, deterioration impact on strength and stiffness, reserve capacity analysis, member adequacy for current and future loads${actualResponses.q4_floors_added === 'Yes' ? ', critical impact of added floors exceeding original design capacity' : ''}, structural redundancy.
+
+Paragraph 2 - Seismic Vulnerability Assessment: IS 1893 compliance for ${actualResponses.q1_city} seismic zone, ductility and detailing per IS 13920, lateral load resisting system adequacy, potential weak zones and soft storeys${actualResponses.q4_floors_added === 'Yes' ? ', modified mass and stiffness distribution from vertical extension, increased seismic demand' : ''}, need for seismic evaluation and retrofitting.
+
+Paragraph 3 - Vibration & Fatigue Analysis: ${actualResponses.q13_rcc_vibration === 'Yes' ? 'Comprehensive analysis of vibration from ' + (Array.isArray(actualResponses.q13_rcc_vibration_sources) ? actualResponses.q13_rcc_vibration_sources.join(' and ') : 'sources') + '. Discuss resonance frequencies, acceleration limits per IS 2911, fatigue stress ranges, cumulative damage from cyclic loading, crack initiation and propagation, long-term durability implications, structural health monitoring needs, mitigation strategies.' : 'No significant vibration sources identified. Discuss importance of monitoring for future dynamic loads from traffic, construction or machinery. Address serviceability limits and occupant comfort per IS 800 for static loads only.'}
+
+Paragraph 4 - Geotechnical & Foundation Assessment: Foundation system type and adequacy for identified soil conditions (${Array.isArray(actualResponses.q11_soil_types) ? actualResponses.q11_soil_types.join(', ') : 'soil type'}), bearing capacity per IS 6403, settlement analysis for ${actualResponses.q1_age} years of service${actualResponses.q11_ground_issues_has === 'Yes' ? ', detailed investigation of observed ' + (Array.isArray(actualResponses.q11_ground_issues) ? actualResponses.q11_ground_issues.join(', ') : 'ground issues') + ' with bore holes and SPT' : ''}, groundwater table effects, liquefaction potential in seismic zones, soil-structure interaction.
+
+Paragraph 5 - Post-Disaster Structural Evaluation: ${actualResponses.q12_disaster_has === 'Yes' ? 'Comprehensive assessment of structural condition after experiencing ' + (Array.isArray(actualResponses.q12_disaster_types) ? actualResponses.q12_disaster_types.join(', ') : 'disasters') + '. Discuss visible and hidden damage patterns, residual load-carrying capacity, plastic hinge formation, member damage states per IS 13935:2009, need for detailed investigation using NDT, strengthening and retrofitting requirements per IS 13827, safety certification process.' : 'Building has no disaster exposure history. Discuss preparedness assessment for potential future events per IS 1893, seismic deficiency evaluation, need for vulnerability assessment, importance of disaster mitigation measures, retrofitting strategy for enhanced resilience.'}
+
+Paragraph 6 - Material Deterioration Mechanisms: Concrete carbonation depth estimation for ${actualResponses.q1_age} years exposure, chloride ingress rates for ${actualResponses.q3_exposure_type || 'environmental'} conditions per IS 456 exposure classifications, corrosion initiation threshold, propagation phase kinetics, environmental attack mechanisms (sulfate, acid, alkali-aggregate reaction), durability provisions compliance, remaining service life prediction using Tuutti model.
+
+Paragraph 7 - Environmental Exposure Effects: Detailed analysis of ${actualResponses.q3_exposure_type || 'environmental'} exposure classification per IS 456 Table 3, degradation acceleration factors, cover adequacy for exposure class, concrete grade suitability, protective measures effectiveness, micro-climate effects, future deterioration projection.
+
+**5. RECOMMENDATIONS**
+Organize chronologically with detailed subsections:
+
+**IMMEDIATE ACTIONS (0-3 months):**
+• **Non-Destructive Testing:** Rebound Hammer (IS 13311 Part 2), Ultrasonic Pulse Velocity (IS 13311 Part 1), Half-Cell Potential (ASTM C876), Cover meter survey, Core extraction and compressive strength testing
+• **Safety Measures:** Temporary propping/shoring if capacity concerns, load restrictions, access control for unsafe areas
+${actualResponses.q13_expert_intervention_has === 'Yes' ? '• **CLIENT REQUESTED SERVICES:** ' + (Array.isArray(actualResponses.q13_expert_intervention_types) ? actualResponses.q13_expert_intervention_types.join(', ') + ' - Initiate immediately as per client requirements' : 'Expert intervention services') : '• **Detailed Structural Assessment:** Comprehensive evaluation per IS 13935:2009 by licensed structural engineer'}
+${actualResponses.q13_rcc_vibration === 'Yes' ? '• **Vibration Monitoring Program:** Install tri-axial accelerometers, conduct frequency analysis, measure peak particle velocity, implement source isolation, assess structural response' : ''}
+${actualResponses.q11_ground_issues_has === 'Yes' ? '• **Ground Investigation:** Bore holes with SPT, foundation excavation and inspection, settlement monitoring with precise leveling' : ''}
+${actualResponses.q12_disaster_has === 'Yes' ? '• **Post-Disaster Safety Assessment:** Rapid visual screening, detailed damage documentation, tagging (Green/Yellow/Red), safety certification' : ''}
+
+**SHORT-TERM ACTIONS (3-12 months):**
+• **Crack Repair:** Epoxy injection per IS 15477 for structural cracks, polymer-modified mortar for non-structural cracks, route and seal for dormant cracks
+• **Spalling Repair:** Remove loose concrete, clean reinforcement, apply rust converter, rebuild with polymer-modified repair mortar, apply protective coating
+• **Corrosion Protection:** Cathodic protection systems, re-alkalisation treatment, corrosion inhibitors, sacrificial anodes for ongoing protection
+• **Waterproofing:** External waterproofing membrane, crystalline waterproofing for internal surfaces, improve drainage, seal joints
+• **Strengthening:** FRP wrapping for shear/flexural enhancement, concrete jacketing for columns, steel plate bonding, external post-tensioning if required
+${actualResponses.q4_floors_added === 'Yes' ? '• **Capacity Enhancement:** Structural strengthening to address increased loads from added floors, column jacketing, beam strengthening, foundation augmentation if needed' : ''}
+${actualResponses.q12_disaster_has === 'Yes' ? '• **Seismic Retrofitting:** Shear wall addition, steel bracing systems, base isolation feasibility, connection strengthening per IS 13827 and IS 13920' : ''}
+
+**LONG-TERM ACTIONS (1-5 years):**
+• **Preventive Maintenance:** Anti-carbonation coating application, regular facade cleaning, drainage system maintenance, joint sealing, protective treatments
+${actualResponses.q13_expert_intervention_types?.includes('Structural Health Monitoring') ? '• **Implement SHMS (as requested by client):** Install sensor network (strain gauges, tiltmeters, accelerometers, crack meters), data acquisition system, automated alerts, periodic data analysis' : '• **Structural Health Monitoring System:** Continuous monitoring of critical parameters, sensor network for crack widths, deflections, strains, accelerations'}
+• **Periodic Re-assessment:** Detailed inspections every 6-12 months initially, comprehensive assessment per IS 13935 annually, adjust frequency based on deterioration rate
+• **Documentation:** Maintain structural health records, repair and maintenance logs, testing reports, as-built drawings with modifications, assessment history
+
+**6. CONCLUSION**
+Write 5 comprehensive concluding paragraphs (each 6-7 sentences):
+
+Paragraph 1: Final structural health status - provide definitive overall rating (Excellent/Good/Fair/Poor/Critical) for this ${actualResponses.q1_age}-year-old ${actualResponses.q2_usage} building in ${actualResponses.q1_city}. State confidence level in assessment (High/Medium/Low) and basis (visual inspection, provided data, professional experience). Summarize overall structural adequacy and safety.
+
+Paragraph 2: Most critical findings requiring immediate attention - prioritize top 3-5 issues by safety impact, describe potential consequences if unaddressed (collapse risk, safety hazards, progressive deterioration, liability), justify urgency classification, state recommended timeline for action (days/weeks/months).
+
+Paragraph 3: Service life prognosis - WITH timely intervention: expected remaining service life (years), achievable performance level, cost-benefit analysis; WITHOUT intervention: deterioration timeline, critical failure scenarios, liability and safety risks, economic implications of delayed action.
+
+Paragraph 4: Professional recommendations - strongly recommend comprehensive detailed structural assessment per IS 13935:2009 by licensed structural engineer ${actualResponses.q13_expert_intervention_has === 'Yes' ? ', specifically addressing client request for ' + (Array.isArray(actualResponses.q13_expert_intervention_types) ? actualResponses.q13_expert_intervention_types[0] : 'expert services') + ' as priority action, suggested next steps include engaging qualified consultant within 30 days, scope of work for detailed investigation, expected deliverables and timeline' : ', scope to include NDT investigation, structural analysis, capacity evaluation, detailed recommendations'}. Emphasize importance of specialized testing and material investigation beyond visual assessment.
+
+Paragraph 5: Disclaimer - this is preliminary assessment based on visual inspection data and questionnaire responses provided, not a substitute for detailed structural investigation per IS 13935, limitations include no access to hidden elements, no material testing performed, no structural calculations conducted, recommendations are general guidance, final decisions require detailed engineering analysis by qualified professional, engineer liability limitations, owner's responsibility for implementation and safety.
+
+CRITICAL FORMATTING FOR PDF GENERATION:
+• Add TWO blank lines (\\n\\n) before each main section
+• Add ONE blank line between paragraphs within sections  
+• Use **text** for all headings and subheadings
+• Use bullet points (•) with consistent indentation
+• Write paragraphs of 6-9 sentences each for comprehensive coverage
+• Target 6000-8000 words total for detailed technical report
+• Base EVERYTHING on the actual building data provided above
+• Mention specific numbers, locations, elements, observations throughout`;
+
+      try {
+        const response = await axios.post(
+          GROQ_API_URL,
+          {
+            model: GROQ_MODEL,
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a Licensed Professional Structural Engineer with 25+ years experience in building assessment, forensic engineering and  structural diagnostics. Generate comprehensive, technically detailed structural assessment reports following IS codes. Write thorough analyses with extensive technical content, proper formatting and  detailed recommendations. Each report should be 6000-8000 words minimum.'
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            temperature: 0.7,
+            max_tokens: 8000,
+            top_p: 0.95
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${GROQ_API_KEY}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        report = response.data.choices?.[0]?.message?.content;
+
+        if (!report) {
+          // Unexpected response structure — fall back to mock
+          groqDebug = response.data;
+          console.warn('GROQ returned an unexpected response, falling back to mock.');
+          report = generateMockReport(user_details, assessment_responses);
+          usedMock = true;
+        }
+      } catch (groqError) {
+        // Log detailed GROQ error then fall back to mock generator
+        console.error('GROQ API call failed:', groqError.message);
+        groqDebug = groqError.response?.data || groqError.message;
+        report = generateMockReport(user_details, assessment_responses);
+        usedMock = true;
+      }
+    } else {
+      console.log('GROQ API key not configured. Using mock report generator...');
+      report = generateMockReport(user_details, assessment_responses);
+    }
+
+    const source = usedMock ? 'Mock (fallback)' : (GROQ_API_KEY ? 'GROQ API' : 'Mock Generator');
+    const resp = {
+      success: true,
+      report: report,
+      timestamp: new Date().toISOString(),
+      source
+    };
+
+    if (usedMock && groqDebug) {
+      resp.groq_debug = groqDebug;
+    }
+
+    res.json(resp);
+
+  } catch (error) {
+    console.error('Error generating report:', error.message);
+    console.error('Error status:', error.response?.status);
+    console.error('Error data:', error.response?.data);
+    
+    let errorMessage = 'Error generating report';
+    if (error.response?.status === 400) {
+      errorMessage = 'Bad request - invalid API key or request format';
+    } else if (error.response?.status === 401) {
+      errorMessage = 'API authentication failed - invalid GROQ API key';
+    } else if (error.response?.status === 429) {
+      errorMessage = 'Rate limited - please try again later';
+    } else if (error.message.includes('ECONNREFUSED')) {
+      errorMessage = 'Connection failed - GROQ service unavailable';
+    }
+
+    res.status(500).json({
+      error: errorMessage,
+      details: error.message
+    });
+  }
+});
+
+// Legacy alias for older clients/tests: proxy to /api/generate-building-report
+app.post('/api/generate-report', async (req, res) => {
+  try {
+    const target = `http://localhost:${process.env.PORT || 5000}/api/generate-building-report`;
+    const resp = await axios.post(target, req.body, { timeout: 120000 });
+    return res.status(resp.status).json(resp.data);
+  } catch (err) {
+    console.error('Proxy to /api/generate-building-report failed:', err.message);
+    if (err.response) {
+      return res.status(err.response.status).send(err.response.data);
+    }
+    return res.status(500).json({ error: 'Internal proxy error', details: err.message });
+  }
+});
+
+// Legacy alias: proxy /api/generate-pdf to /api/generate-building-report-pdf
+app.post('/api/generate-pdf', async (req, res) => {
+  try {
+    const target = `http://localhost:${process.env.PORT || 5000}/api/generate-building-report-pdf`;
+    const resp = await axios.post(target, req.body, { responseType: 'arraybuffer', timeout: 120000 });
+    // Avoid copying transfer-encoding/content-length to prevent header conflicts
+    const safeHeaders = { 'content-type': resp.headers['content-type'] };
+    if (resp.headers['content-disposition']) safeHeaders['content-disposition'] = resp.headers['content-disposition'];
+    res.status(resp.status).set(safeHeaders).send(resp.data);
+  } catch (err) {
+    console.error('Proxy to /api/generate-building-report-pdf failed:', err.message);
+    if (err.response) {
+      return res.status(err.response.status).send(err.response.data);
+    }
+    return res.status(500).json({ error: 'Internal proxy error', details: err.message });
+  }
+});
+
+// PDF generation endpoint using PDFKit
+app.post('/api/generate-building-report-pdf', async (req, res) => {
+  try {
+    const user_details = req.body.user_details || req.body.userDetails || {};
+    const assessment_responses = req.body.assessment_responses || req.body.assessmentResponses;
+    let reportText = req.body.reportText || req.body.report_text || undefined;
+
+    if (!assessment_responses && !reportText) {
+      return res.status(400).json({ error: 'Missing assessment responses or reportText' });
+    }
+
+    // Unwrap the raw responses if they are wrapped (may be undefined when reportText provided)
+    const actualResponses = (assessment_responses && (assessment_responses.raw_responses || assessment_responses)) || {};
+
+    console.log('📄 Generating AI report and/or PDF...');
+    console.log('  - User:', user_details?.name || 'Unknown');
+    console.log('  - Using reportText provided:', !!reportText);
+    console.log('  - Total fields from responses:', Object.keys(actualResponses).length);
+    let usedMock = false;
+
+    if (reportText) {
+      console.log('Using provided reportText for PDF generation.');
+    } else if (GROQ_API_KEY) {
+      console.log('🤖 Using GROQ API to generate comprehensive report...');
+      
+      // Build comprehensive prompt from ACTUAL assessment responses
+      const buildingInfo = `
+Building Age: ${actualResponses.q1_age} years (Range: ${actualResponses.q1_ageRange || 'N/A'})
+Location: ${actualResponses.q1_city}${actualResponses.q1_city_other ? ` (${actualResponses.q1_city_other})` : ''}, ${actualResponses.q1_country}${actualResponses.q1_country_other ? ` (${actualResponses.q1_country_other})` : ''}
+Storeys: ${actualResponses.q1_storeys_above} above ground, ${actualResponses.q1_storeys_below} below ground
+Building Type: ${actualResponses.q2_usage}${actualResponses.q2_usage_other ? ` (${actualResponses.q2_usage_other})` : ''}
+Structural System: ${actualResponses.q5_structural_system}
+Environmental Exposure: ${actualResponses.q3_exposure_type}${actualResponses.q3_exposure_other ? ` (${actualResponses.q3_exposure_other})` : ''}
+Additional Floors: ${actualResponses.q4_floors_added}${actualResponses.q4_floors_added === 'Yes' ? ` - ${actualResponses.q4_floors_details || 'details not provided'}` : ''}
+Floor Added After Construction: ${actualResponses.q4_floors_added_after || 'Not specified'}
+Heavy Machinery: ${actualResponses.q4_heavy_machinery || 'Not specified'}
+
+=== STRUCTURAL OBSERVATIONS ===
+
+Q6 - RCC CRACKS:
+Has Cracks: ${actualResponses.q6_rcc_has_cracks || 'Not specified'}
+Crack Elements: ${Array.isArray(actualResponses.q6_rcc_crack_elements) ? actualResponses.q6_rcc_crack_elements.join(', ') : 'None'}${actualResponses.q6_rcc_crack_elements_other ? ` (${actualResponses.q6_rcc_crack_elements_other})` : ''}
+Crack Orientation: ${Array.isArray(actualResponses.q6_rcc_crack_orientation) ? actualResponses.q6_rcc_crack_orientation.join(', ') : 'None'}${actualResponses.q6_rcc_crack_orientation_other ? ` (${actualResponses.q6_rcc_crack_orientation_other})` : ''}
+Crack Location: ${Array.isArray(actualResponses.q6_rcc_crack_location) ? actualResponses.q6_rcc_crack_location.join(', ') : 'None'}${actualResponses.q6_rcc_crack_location_other ? ` (${actualResponses.q6_rcc_crack_location_other})` : ''}
+Has Deformation: ${actualResponses.q6_rcc_deformation || 'Not specified'}
+Deformation Elements: ${Array.isArray(actualResponses.q6_rcc_deformation_elements) ? actualResponses.q6_rcc_deformation_elements.join(', ') : 'None'}${actualResponses.q6_rcc_deformation_elements_other ? ` (${actualResponses.q6_rcc_deformation_elements_other})` : ''}
+
+Q7 - RCC SPALLING:
+Has Spalling: ${actualResponses.q7_rcc_spalling_has || 'Not specified'}
+Spalling Locations: ${Array.isArray(actualResponses.q7_rcc_spalling) ? actualResponses.q7_rcc_spalling.join(', ') : 'None'}${actualResponses.q7_rcc_spalling_other ? ` (${actualResponses.q7_rcc_spalling_other})` : ''}
+
+Q8 - SURFACE OBSERVATIONS:
+Damp Patches: ${actualResponses.q8a_damp_has === 'Yes' ? 'YES - ' + (Array.isArray(actualResponses.q8a_damp_elements) ? actualResponses.q8a_damp_elements.join(', ') : 'locations') : 'No'}${actualResponses.q8a_damp_elements_other ? ` (${actualResponses.q8a_damp_elements_other})` : ''}
+White Patches (Efflorescence): ${actualResponses.q8b_white_has === 'Yes' ? 'YES - ' + (Array.isArray(actualResponses.q8b_white_elements) ? actualResponses.q8b_white_elements.join(', ') : 'locations') : 'No'}${actualResponses.q8b_white_elements_other ? ` (${actualResponses.q8b_white_elements_other})` : ''}
+Green Patches (Algae/Moss): ${actualResponses.q8c_green_has === 'Yes' ? 'YES - ' + (Array.isArray(actualResponses.q8c_green_elements) ? actualResponses.q8c_green_elements.join(', ') : 'locations') : 'No'}${actualResponses.q8c_green_elements_other ? ` (${actualResponses.q8c_green_elements_other})` : ''}
+
+Q9 - CORROSION:
+Has Corrosion: ${actualResponses.q9_rcc_corrosion_has || 'Not specified'}
+Corrosion Elements: ${Array.isArray(actualResponses.q9_rcc_corrosion_elements) ? actualResponses.q9_rcc_corrosion_elements.join(', ') : 'None'}${actualResponses.q9_rcc_corrosion_elements_other ? ` (${actualResponses.q9_rcc_corrosion_elements_other})` : ''}
+
+Q10 - VIBRATION & DYNAMIC LOADING:
+User Feels Vibration: ${actualResponses.q13_rcc_vibration || 'Not specified'}
+Vibration Sources: ${Array.isArray(actualResponses.q13_rcc_vibration_sources) ? actualResponses.q13_rcc_vibration_sources.join(', ') : 'None'}${actualResponses.q13_rcc_vibration_sources_other ? ` (${actualResponses.q13_rcc_vibration_sources_other})` : ''}
+
+Q11 - FOUNDATION SOIL & GROUND CONDITIONS:
+Soil Types: ${Array.isArray(actualResponses.q11_soil_types) ? actualResponses.q11_soil_types.join(' | ') : 'Not specified'}${actualResponses.q11_soil_types_other ? ` (${actualResponses.q11_soil_types_other})` : ''}
+Ground Issues Present: ${actualResponses.q11_ground_issues_has || 'Not specified'}
+Ground Issues: ${Array.isArray(actualResponses.q11_ground_issues) ? actualResponses.q11_ground_issues.join(', ') : 'None'}${actualResponses.q11_ground_issues_other ? ` (${actualResponses.q11_ground_issues_other})` : ''}
+
+Q12 - NATURAL DISASTERS & HAZARDOUS EVENTS:
+Disaster Experienced: ${actualResponses.q12_disaster_has || 'Not specified'}
+Disaster Types: ${Array.isArray(actualResponses.q12_disaster_types) ? actualResponses.q12_disaster_types.join(', ') : 'None'}${actualResponses.q12_disaster_types_other ? ` (${actualResponses.q12_disaster_types_other})` : ''}
+
+Q13 - REMEDIAL MEASURES & EXPERT INTERVENTION:
+Expert Intervention Requested: ${actualResponses.q13_expert_intervention_has || 'Not specified'}
+Services Requested: ${Array.isArray(actualResponses.q13_expert_intervention_types) ? actualResponses.q13_expert_intervention_types.join(', ') : 'None'}${actualResponses.q13_expert_intervention_types_other ? ` (${actualResponses.q13_expert_intervention_types_other})` : ''}
+Subscribed for Detailed Assessment: ${actualResponses.q13_subscribe_details ? 'Yes' : 'No'}
+`;
+
+      const observationsText = Object.entries(actualResponses)
+        .filter(([key, value]) => {
+          // Exclude arrays and already included fields
+          if (key.startsWith('q11_') || key.startsWith('q12_') || key.startsWith('q13_rcc_vibration')) return false;
+          return value && typeof value === 'string' && value.length > 10;
+        })
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n');
+
+      const prompt = `You are a Licensed Professional Structural Engineer conducting a building assessment.
+
+CRITICAL REQUIREMENT - USE THESE EXACT 6 SECTION HEADINGS ONLY:
+1. OVERVIEW
+2. KEY OBSERVATIONS  
+3. RISK SUMMARY
+4. TECHNICAL ASSESSMENT
+5. RECOMMENDATIONS
+6. CONCLUSION
+
+BUILDING DATA:
+${buildingInfo}
+
+OBSERVATIONS:
+${observationsText}
+
+Generate a comprehensive structural assessment report. Each section must start with its number and title exactly as shown above. Use proper spacing between sections and paragraphs.
+
+CRITICAL: In your analysis, you MUST address these newly collected parameters:
+- Vibration sources and dynamic loading effects (Q10)
+- Foundation soil types and ground stability issues (Q11)
+- Natural disaster history and post-event structural status (Q12)
+- Expert intervention needs and remedial measure requirements (Q13)
+
+Write detailed, technical content under each heading:
+
+1. OVERVIEW
+[Write 4-5 detailed paragraphs about: building details (${actualResponses.q1_age || 'N/A'} years old, located in ${actualResponses.q1_city || 'N/A'}, ${actualResponses.q5_structural_system || 'N/A'} system), assessment scope, overall health rating with justification, key findings summary INCLUDING VIBRATION SOURCES, SOIL CONDITIONS, DISASTER HISTORY and  EXPERT INTERVENTION NEEDS, environmental exposure (${actualResponses.q3_exposure_type || 'N/A'}), methodology. 
+
+Each paragraph should be 5-7 sentences long. Add blank line between paragraphs.]
+
+2. KEY OBSERVATIONS  
+[Create clear subsections with detailed findings. Use format "**Subsection Name:**" followed by bullet points (• or -). Cover: 
+
+**Structural Cracks:** ${actualResponses.q6_rcc_has_cracks === 'Yes' ? (Array.isArray(actualResponses.q6_rcc_crack_elements) ? actualResponses.q6_rcc_crack_elements.join(', ') : 'elements') : 'None observed'}
+• Detail the crack patterns orientations, locations, severity
+• Discuss structural implications and load path disruption
+
+**Material Degradation:** ${actualResponses.q7_rcc_spalling_has === 'Yes' ? (Array.isArray(actualResponses.q7_rcc_spalling) ? actualResponses.q7_rcc_spalling.join(', ') : 'spalling') : 'None observed'}
+• Spalling extent and reinforcement exposure
+• Concrete cover loss and durability concerns
+
+**Moisture Infiltration:** (damp: ${actualResponses.q8a_damp_has || 'No'}, efflorescence: ${actualResponses.q8b_white_has || 'No'}, algae: ${actualResponses.q8c_green_has || 'No'})
+• Water ingress paths and affected areas
+• Dampness patterns and severity
+
+**Reinforcement Corrosion:** ${actualResponses.q9_rcc_corrosion_has === 'Yes' ? (Array.isArray(actualResponses.q9_rcc_corrosion_elements) ? actualResponses.q9_rcc_corrosion_elements.join(', ') : 'elements') : 'None observed'}
+• Corrosion indicators and extent
+• Chloride ingress and carbonation effects
+
+**Structural Deformations:** ${actualResponses.q6_rcc_deformation === 'Yes' ? (Array.isArray(actualResponses.q6_rcc_deformation_elements) ? actualResponses.q6_rcc_deformation_elements.join(', ') : 'elements') : 'None observed'}
+• Deflection, tilting, settlement patterns
+• Serviceability and safety implications
+
+**Vibration & Dynamic Loading:** ${actualResponses.q13_rcc_vibration === 'Yes' ? 'YES - Sources: ' + (Array.isArray(actualResponses.q13_rcc_vibration_sources) ? actualResponses.q13_rcc_vibration_sources.join(', ') : 'identified sources') : 'No vibration reported'}
+${actualResponses.q13_rcc_vibration === 'Yes' ? '• Analyze vibration frequencies and amplitudes\n• Discuss fatigue and cumulative damage effects\n• Assess impact on structural integrity' : ''}
+
+**Foundation & Soil Conditions:** Soil types: ${Array.isArray(actualResponses.q11_soil_types) ? actualResponses.q11_soil_types.join(', ') : 'not specified'} | Ground stability: ${actualResponses.q11_ground_issues_has === 'Yes' ? 'ISSUES PRESENT - ' + (Array.isArray(actualResponses.q11_ground_issues) ? actualResponses.q11_ground_issues.join(', ') : 'concerns') : 'Stable'}
+• Foundation bearing capacity adequacy
+• Settlement, subsidence or differential movement
+• Geotechnical risk factors
+
+**Disaster Exposure History:** ${actualResponses.q12_disaster_has === 'Yes' ? 'EXPERIENCED - ' + (Array.isArray(actualResponses.q12_disaster_types) ? actualResponses.q12_disaster_types.join(', ') : 'disasters') : 'No disaster history'}
+${actualResponses.q12_disaster_has === 'Yes' ? '• Post-disaster structural damage assessment\n• Residual capacity and safety concerns\n• Need for strengthening or retrofitting' : ''}
+
+Add blank lines between subsections.]
+
+3. RISK SUMMARY
+[Categorize ALL findings into three risk levels with clear bullet points. INCLUDE VIBRATION, SOIL and  DISASTER RISKS:
+
+**CRITICAL/HIGH RISK (Immediate Action - 0-1 month):**
+• List urgent safety issues including disaster damage
+• Severe vibration affecting structural integrity
+• Foundation settlement or bearing failure
+• Exposed reinforcement with active corrosion
+• Structural capacity concerns
+• Major cracks threatening stability
+
+**MEDIUM RISK (Prompt Action - 1-6 months):**
+• List important deterioration including moderate vibration
+• Soil settlement requiring monitoring
+• Progressive spalling and corrosion
+• Serviceability issues
+• Water ingress and moisture problems
+• Durability degradation
+
+**LOW RISK (Monitoring & Maintenance - 6-24 months):**
+• List maintenance items
+• Minor cosmetic issues
+• Preventive treatments
+• Periodic inspections
+
+Add blank line between risk categories.]
+
+4. TECHNICAL ASSESSMENT
+[Write 5-6 detailed technical paragraphs (each 6-8 sentences) analyzing: 
+
+Paragraph 1 - Structural Integrity: Load-carrying capacity, safety factors per IS 456:2000, deterioration impact on strength, reserve capacity analysis, member adequacy for current and future loads${actualResponses.q4_floors_added === 'Yes' ? ', impact of added floors on original design capacity' : ''}.
+
+Paragraph 2 - Seismic Vulnerability: IS 1893 compliance for ${actualResponses.q1_city || 'location'} seismic zone, ductility and detailing adequacy, potential weak zones, lateral load resistance${actualResponses.q4_floors_added === 'Yes' ? ', modified mass and stiffness distribution due to added floors' : ''}.
+
+Paragraph 3 - Vibration Analysis: ${actualResponses.q13_rcc_vibration === 'Yes' ? 'Detailed analysis of ' + (Array.isArray(actualResponses.q13_rcc_vibration_sources) ? actualResponses.q13_rcc_vibration_sources.join(' and ') : 'vibration') + ' on structural health. Discuss resonance risks, fatigue accumulation, crack propagation due to cyclic loading, acceleration limits per IS 2911 and  long-term durability implications.' : 'No significant vibration sources identified. Discuss importance of monitoring for future dynamic loads.'}
+
+Paragraph 4 - Geotechnical Considerations: Foundation system adequacy for soil type (${Array.isArray(actualResponses.q11_soil_types) ? actualResponses.q11_soil_types[0] : 'soil'}), bearing capacity per IS 6403, settlement analysis${actualResponses.q11_ground_issues_has === 'Yes' ? ', investigation of observed ' + (Array.isArray(actualResponses.q11_ground_issues) ? actualResponses.q11_ground_issues.join(', ') : 'ground issues') : ''}, groundwater effects, liquefaction potential.
+
+Paragraph 5 - Post-Disaster Assessment: ${actualResponses.q12_disaster_has === 'Yes' ? 'Comprehensive evaluation of structural condition after experiencing ' + (Array.isArray(actualResponses.q12_disaster_types) ? actualResponses.q12_disaster_types.join(', ') : 'disasters') + '. Discuss residual capacity, hidden damage, need for detailed investigation per IS 13935:2009 and  retrofitting requirements.' : 'Building has not experienced major disasters. Discuss preparedness for potential future events and importance of seismic retrofitting if applicable.'}
+
+Paragraph 6 - Material Deterioration Mechanisms: Carbonation depth, chloride ingress rates for ${actualResponses.q3_exposure_type || 'exposure'} condition, corrosion initiation and propagation, environmental attack mechanisms, durability per IS 456 provisions, remaining service life estimation.
+
+Add blank line between paragraphs.]
+
+5. RECOMMENDATIONS  
+[Organize by timeline with detailed subsections. ADDRESS EXPERT INTERVENTION REQUESTS (Q13):
+
+**IMMEDIATE ACTIONS (0-3 months):**
+• NDT Investigation: Rebound Hammer (IS 13311 Part 2), UPV testing (IS 13311 Part 1), Half-Cell potential mapping (ASTM C876), Cover meter survey, Core extraction and testing
+• Safety Measures: Temporary propping if needed, load restrictions, access control
+${actualResponses.q13_expert_intervention_has === 'Yes' ? '• **CLIENT REQUESTED SERVICES:** ' + (Array.isArray(actualResponses.q13_expert_intervention_types) ? actualResponses.q13_expert_intervention_types.join(', ') : 'Expert intervention') : '• Detailed Structural Assessment per IS 13935:2009'}
+${actualResponses.q13_rcc_vibration === 'Yes' ? '• **Vibration Monitoring:** Install accelerometers, conduct frequency analysis, implement source isolation measures' : ''}
+${actualResponses.q11_ground_issues_has === 'Yes' ? '• **Ground Investigation:** Bore holes, SPT, foundation inspection, settlement monitoring' : ''}
+${actualResponses.q12_disaster_has === 'Yes' ? '• **Post-Disaster Assessment:** Detailed damage mapping, capacity evaluation, safety certification' : ''}
+
+**SHORT-TERM ACTIONS (3-12 months):**
+• Structural Repairs: Epoxy injection for cracks (IS 15477), spalling repair with polymer-modified mortar, corrosion protection (cathodic protection or re-alkalisation)
+• Waterproofing: External waterproofing membrane, drainage improvement, damp-proofing treatments
+• Strengthening: FRP wrapping if needed, concrete jacketing, steel plate bonding
+${actualResponses.q4_floors_added === 'Yes' ? '• Capacity Enhancement: Address load increase from added floors, strengthen existing members if required' : ''}
+${actualResponses.q12_disaster_has === 'Yes' ? '• Seismic Retrofitting: Shear walls, bracing systems, base isolation considerations' : ''}
+
+**LONG-TERM ACTIONS (1-5 years):**
+• Preventive Maintenance: Anti-carbonation coating, regular cleaning, drainage maintenance
+${actualResponses.q13_expert_intervention_types?.includes('Structural Health Monitoring') ? '• **Implement SHMS (as requested):** Install sensors, continuous monitoring, automated alerts' : '• SHMS Installation: Sensor network for crack widths, deflections, strains, accelerations'}
+• Periodic Re-assessment: Biannual inspections initially, annual detailed assessment per IS 13935
+• Documentation: Maintain structural health records, repair logs, testing reports
+
+Add blank line between timeline sections.]
+
+6. CONCLUSION
+[Write 4-5 conclusive paragraphs (each 5-6 sentences):
+
+Paragraph 1: Final structural health status summary with overall rating (Good/Fair/Poor), confidence level, basis for assessment.
+
+Paragraph 2: Most critical findings requiring immediate attention, safety implications if unaddressed, urgency justification.
+
+Paragraph 3: Service life prognosis - with timely intervention (expected lifespan), without intervention (risks and timeline), cost-benefit of proactive measures.
+
+Paragraph 4: Professional recommendation for comprehensive IS 13935:2009 detailed assessment by licensed structural engineer, importance of specialized testing${actualResponses.q13_expert_intervention_has === 'Yes' ? ', acknowledgment of client request for ' + (Array.isArray(actualResponses.q13_expert_intervention_types) ? actualResponses.q13_expert_intervention_types[0] : 'expert services') + ' and suggested next steps' : ''}.
+
+Paragraph 5: Disclaimer - preliminary assessment based on visual inspection and provided data, limitations, need for detailed investigation, engineer liability limitations.
+
+Add blank line between paragraphs.]
+
+FORMATTING REQUIREMENTS FOR READABILITY:
+• Start each main section with its number and name on a new line: "1. OVERVIEW"
+• Add TWO blank lines before each main section (except the first)
+• Use subsection headers with ** formatting: **Header Name:**
+• Add ONE blank line before each subsection
+• Use bullet points (• or -) for lists with proper indentation
+• Write paragraphs with 5-8 sentences each
+• Add ONE blank line between paragraphs
+• Add ONE blank line between different risk categories
+• Total report should be 5000-7000 words for comprehensive coverage
+• Base everything on the actual building data provided above`;
+
+
+
+      try {
+        const response = await axios.post(
+          GROQ_API_URL,
+          {
+            model: GROQ_MODEL,
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a Licensed Professional Structural Engineer. Generate detailed building assessment reports using EXACTLY these 6 section headings in order: 1. OVERVIEW, 2. KEY OBSERVATIONS, 3. RISK SUMMARY, 4. TECHNICAL ASSESSMENT, 5. RECOMMENDATIONS, 6. CONCLUSION. Each section must start with its number and name. Write comprehensive, technical content with subsections, bullet points and  detailed paragraphs. Include IS code references and specific recommendations.'
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            temperature: 0.7,
+            max_tokens: 8000,
+            top_p: 0.9
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${GROQ_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 60000
+          }
+        );
+        reportText = response.data.choices?.[0]?.message?.content;
+        console.log('✅ GROQ API generated report successfully');
+        console.log('  - Report length:', reportText?.length || 0, 'characters');
+      } catch (error) {
+        console.error('❌ GROQ API failed:', error.message);
+        reportText = generateMockReport(user_details, assessment_responses);
+        usedMock = true;
+      }
+    } else {
+      console.log('⚠️ No GROQ API key, using mock report');
+      reportText = generateMockReport(user_details, assessment_responses);
+      usedMock = true;
+    }
+
+    if (!reportText || reportText.length < 100) {
+      throw new Error('Failed to generate valid report text');
+    }
+
+    // Create PDF using PDFKit
+    const doc = new PDFDocument({ 
+      size: 'A4', 
+      margins: { top: 50, bottom: 70, left: 60, right: 60 },
+      bufferPages: true,
+      autoFirstPage: false
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="Building_Assessment_Report.pdf"');
+    doc.pipe(res);
+
+    // Ensure a page exists before reading dimensions (autoFirstPage is false)
+    doc.addPage();
+
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+    const leftMargin = 60;
+    const rightMargin = pageWidth - 60;
+    const centerX = pageWidth / 2;
+
+    // Try to load logo from multiple possible locations
+    let logoPath = path.join(__dirname, '..', 'frontend', 'public', 'Made with insMind-sppl-logo.png');
+    if (!fs.existsSync(logoPath)) {
+      logoPath = path.join(__dirname, 'public', 'Made with insMind-sppl-logo.png');
+    }
+    if (!fs.existsSync(logoPath)) {
+      logoPath = path.join(__dirname, 'public', 'img', 'sppl-logo.png');
+    }
+    if (!fs.existsSync(logoPath)) {
+      logoPath = path.join(__dirname, 'public', 'logo', 'sppl-logo.png');
+    }
+    const logoExists = fs.existsSync(logoPath);
+
+    // Draw logo at the top center with proper sizing and positioning
+    let currentY = 60;
+    if (logoExists) {
+      try {
+        // Get image dimensions and scale proportionally
+        const logoWidth = 140;
+        const logoHeight = 48;
+        const logoX = (pageWidth - logoWidth) / 2;
+        doc.image(logoPath, logoX, currentY, { 
+          fit: [logoWidth, logoHeight],
+          align: 'center',
+          valign: 'top'
+        });
+        currentY += logoHeight + 25;
+      } catch (e) {
+        console.error('Logo load failed:', e.message);
+        currentY += 20;
+      }
+    } else {
+      console.log('Logo not found, skipping');
+      currentY += 20;
+    }
+
+    // Company name centered
+    doc.font('Helvetica-Bold').fontSize(22).fillColor('#000000');
+    doc.text('Sanrachna Prahari Pvt Ltd', leftMargin, currentY, { width: rightMargin - leftMargin, align: 'center' });
+    currentY += 28;
+    
+    doc.font('Helvetica').fontSize(11).fillColor('#666666');
+    doc.text('(An IIT Delhi Incubated Company)', leftMargin, currentY, { width: rightMargin - leftMargin, align: 'center' });
+    currentY += 35;
+
+    // Separator line
+    doc.strokeColor('#003366').lineWidth(2.5);
+    doc.moveTo(leftMargin, currentY).lineTo(rightMargin, currentY).stroke();
+    currentY += 35;
+
+    // Report Title
+    doc.font('Helvetica-Bold').fontSize(20).fillColor('#003366');
+    doc.text('PRELIMINARY ASSESSMENT REPORT', leftMargin, currentY, { width: rightMargin - leftMargin, align: 'center' });
+    currentY += 60;
+
+    // Clean markdown from report
+    const cleaned = String(reportText || '')
+      .replace(/\r/g, '')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/__(.+?)__/g, '$1')
+      .replace(/_(.+?)_/g, '$1');
+
+    const lines = cleaned.split(/\n/);
+    let inList = false;
+    doc.y = currentY;
+
+    for (let i = 0; i < lines.length; i++) {
+      const raw = lines[i];
+      const line = String(raw || '').trim();
+      
+      if (!line) {
+        if (inList) { 
+          doc.moveDown(0.5); 
+          inList = false; 
+        }
+        continue;
+      }
+
+      // Check for page overflow
+      if (doc.y > pageHeight - 100) {
+        doc.addPage();
+        doc.y = 80;
+      }
+
+      // Section header
+      const sectionMatch = line.match(/^(\d+)\.\s+(.+)$/);
+      if (sectionMatch) {
+        if (inList) { doc.moveDown(0.4); inList = false; }
+        
+        // Ensure enough space for section header
+        if (doc.y > pageHeight - 200) {
+          doc.addPage();
+          doc.y = 80;
+        } else {
+          doc.moveDown(1.5);
+        }
+        
+        const sectionY = doc.y;
+        const sectionHeight = 32;
+        
+        // Draw modern section header with dark blue background
+        doc.rect(leftMargin - 10, sectionY - 8, rightMargin - leftMargin + 20, sectionHeight)
+           .fillAndStroke('#003366', '#003366');
+        
+        // White section number box
+        doc.save();
+        doc.rect(leftMargin - 7, sectionY - 5, 32, sectionHeight - 6).fill('#ffffff');
+        doc.font('Helvetica-Bold').fontSize(16).fillColor('#003366');
+        doc.text(sectionMatch[1], leftMargin - 7, sectionY, { width: 32, align: 'center' });
+        doc.restore();
+        
+        // Section title in white
+        doc.font('Helvetica-Bold').fontSize(14).fillColor('#ffffff');
+        doc.text(sectionMatch[2].toUpperCase(), leftMargin + 30, sectionY + 3);
+        
+        doc.y = sectionY + sectionHeight + 8;
+        continue;
+      }
+
+      // Subsection header (ends with colon)
+      if (line.endsWith(':') && line.length < 120 && !line.startsWith('-') && !line.startsWith('•')) {
+        if (inList) { doc.moveDown(0.4); inList = false; }
+        
+        if (doc.y > pageHeight - 100) {
+          doc.addPage();
+          doc.y = 80;
+        }
+        
+        doc.moveDown(0.5);
+        const subY = doc.y;
+        
+        // Draw accent bar
+        doc.save();
+        doc.fillColor('#003366');
+        doc.rect(leftMargin - 18, subY, 10, 18).fill();
+        doc.restore();
+        
+        doc.font('Helvetica-Bold').fontSize(12).fillColor('#003366');
+        doc.text(line, leftMargin, subY, { width: rightMargin - leftMargin, align: 'left', lineGap: 4 });
+        doc.moveDown(0.6);
+        continue;
+      }
+
+      // Bullet point
+      if (/^[-•]/.test(line)) {
+        const bulletText = line.replace(/^[-•]\s*/, '');
+        
+        if (doc.y > pageHeight - 100) {
+          doc.addPage();
+          doc.y = 80;
+        }
+        
+        const startY = doc.y;
+        const bulletX = leftMargin + 6;
+        const textX = leftMargin + 22;
+        const availableWidth = rightMargin - textX;
+        
+        // Draw bullet
+        doc.font('Helvetica-Bold').fontSize(11).fillColor('#003366');
+        doc.text('•', bulletX, startY);
+        
+        // Parse markdown bold in bullet text
+        const boldPattern = /\*\*([^*]+)\*\*/g;
+        if (boldPattern.test(bulletText)) {
+          boldPattern.lastIndex = 0;
+          let lastIndex = 0;
+          let match;
+          
+          doc.x = textX;
+          doc.y = startY;
+          
+          while ((match = boldPattern.exec(bulletText)) !== null) {
+            // Regular text before bold
+            if (match.index > lastIndex) {
+              const regularText = bulletText.substring(lastIndex, match.index);
+              doc.font('Helvetica').fontSize(10.5).fillColor('#333333');
+              doc.text(regularText, { continued: true, width: availableWidth, lineGap: 5 });
+            }
+            
+            // Bold text
+            doc.font('Helvetica-Bold').fontSize(10.5).fillColor('#1a1a1a');
+            doc.text(match[1], { continued: true });
+            
+            lastIndex = match.index + match[0].length;
+          }
+          
+          // Remaining text
+          if (lastIndex < bulletText.length) {
+            const remainingText = bulletText.substring(lastIndex);
+            doc.font('Helvetica').fontSize(10.5).fillColor('#333333');
+            doc.text(remainingText, { width: availableWidth, lineGap: 5 });
+          } else {
+            doc.text('');
+          }
+        } else {
+          // Original logic for text with colon
+          const colonIndex = bulletText.indexOf(':');
+          if (colonIndex > 0 && colonIndex < 80) {
+            const boldPart = bulletText.substring(0, colonIndex + 1);
+            const restPart = bulletText.substring(colonIndex + 1).trim();
+            doc.font('Helvetica-Bold').fontSize(10.5).fillColor('#1a1a1a');
+            doc.text(boldPart, textX, startY, { continued: true });
+            doc.font('Helvetica').fontSize(10.5).fillColor('#333333');
+            doc.text(' ' + restPart, { width: availableWidth, lineGap: 5 });
+          } else {
+            doc.font('Helvetica').fontSize(10.5).fillColor('#333333');
+            doc.text(bulletText, textX, startY, { width: availableWidth, lineGap: 5 });
+          }
+        }
+        
+        inList = true;
+        doc.moveDown(0.4);
+        continue;
+      }
+
+      // Regular paragraph
+      if (inList) { doc.moveDown(0.4); inList = false; }
+      
+      if (doc.y > pageHeight - 100) {
+        doc.addPage();
+        doc.y = 80;
+      }
+      
+      // Parse markdown bold text (**text**)
+      const boldPattern = /\*\*([^*]+)\*\*/g;
+      if (boldPattern.test(line)) {
+        // Reset regex
+        boldPattern.lastIndex = 0;
+        
+        const startY = doc.y;
+        let lastIndex = 0;
+        let match;
+        
+        while ((match = boldPattern.exec(line)) !== null) {
+          // Regular text before bold
+          if (match.index > lastIndex) {
+            const regularText = line.substring(lastIndex, match.index);
+            doc.font('Helvetica').fontSize(10.5).fillColor('#2a2a2a');
+            doc.text(regularText, { continued: true, width: rightMargin - leftMargin, lineGap: 6 });
+          }
+          
+          // Bold text
+          doc.font('Helvetica-Bold').fontSize(10.5).fillColor('#1a1a1a');
+          doc.text(match[1], { continued: true });
+          
+          lastIndex = match.index + match[0].length;
+        }
+        
+        // Remaining regular text after last bold
+        if (lastIndex < line.length) {
+          const remainingText = line.substring(lastIndex);
+          doc.font('Helvetica').fontSize(10.5).fillColor('#2a2a2a');
+          doc.text(remainingText, { width: rightMargin - leftMargin, lineGap: 6 });
+        } else {
+          // End the text flow
+          doc.text('');
+        }
+        
+        doc.moveDown(0.5);
+      } else {
+        // No bold formatting
+        doc.font('Helvetica').fontSize(10.5).fillColor('#2a2a2a');
+        doc.text(line, leftMargin, doc.y, { 
+          width: rightMargin - leftMargin, 
+          align: 'justify', 
+          lineGap: 6 
+        });
+        doc.moveDown(0.5);
+      }
+    }
+
+    doc.end();
+  } catch (error) {
+    console.error('PDF generation error:', error && error.stack ? error.stack : error);
+    res.status(500).json({ error: 'Failed to generate PDF', details: error && error.stack ? error.stack : error.message });
+  }
+});
+
+// Save assessment to MongoDB
+app.post('/api/save-assessment', async (req, res) => {
+  try {
+    console.log('🔵 /api/save-assessment endpoint called');
+    console.log('🔵 Request body keys:', Object.keys(req.body));
+    
+    const { 
+      userDetails, 
+      assessmentResponses, 
+      pdfBuffer, 
+      reportText, 
+      assessmentType 
+    } = req.body;
+
+    console.log('🔵 Received data:');
+    console.log('  - userDetails:', userDetails);
+    console.log('  - assessmentResponses type:', typeof assessmentResponses);
+    console.log('  - assessmentResponses keys:', assessmentResponses ? Object.keys(assessmentResponses) : 'null');
+    console.log('  - pdfBuffer length:', pdfBuffer ? pdfBuffer.length : 0);
+    console.log('  - reportText length:', reportText ? reportText.length : 0);
+    console.log('  - assessmentType:', assessmentType);
+
+    // Validate required fields
+    if (!userDetails || !userDetails.email || !userDetails.name) {
+      console.error('❌ Validation failed: Missing user details');
+      return res.status(400).json({ 
+        error: 'Missing required user details (name, email)' 
+      });
+    }
+
+    // Convert base64 PDF buffer to Buffer if needed
+    let pdfData = null;
+    if (pdfBuffer) {
+      const buffer = Buffer.isBuffer(pdfBuffer) 
+        ? pdfBuffer 
+        : Buffer.from(pdfBuffer, 'base64');
+      
+      pdfData = {
+        filename: `OSHAM_Assessment_${userDetails.name.replace(/\s+/g, '_')}_${Date.now()}.pdf`,
+        contentType: 'application/pdf',
+        size: buffer.length,
+        data: buffer,
+        generatedAt: getISTTimestamp()
+      };
+    }
+
+    // Extract raw responses for flattened storage
+    const rawResponses = assessmentResponses?.raw_responses || assessmentResponses || {};
+    
+    // Create assessment document
+    const assessmentDoc = {
+      userDetails: {
+        name: userDetails.name,
+        email: userDetails.email,
+        phoneCountryCode: userDetails.phoneCountryCode || '+91',
+        phone: userDetails.phone || '',
+        organization: userDetails.organization || '',
+        structureType: userDetails.structureType || assessmentType || 'Building',
+        q1: userDetails.q1 || '',
+        q1Other: userDetails.q1Other || '',
+        yearOfConstruction: userDetails.yearOfConstruction || null,
+        location: userDetails.location || ''
+      },
+      assessmentResponses: assessmentResponses || {},
+      // Store flattened copy of raw responses at top level for easy Compass access
+      responses: rawResponses,
+      pdfData: pdfData,
+      reportText: reportText || '',
+      assessmentType: assessmentType || 'Building',
+      status: 'completed'
+    };
+
+    console.log('🔵 Creating Assessment document...');
+    console.log('🔵 Document structure:', JSON.stringify({
+      userDetails: assessmentDoc.userDetails,
+      assessmentResponses: assessmentDoc.assessmentResponses ? 'present' : 'missing',
+      responses: assessmentDoc.responses ? `${Object.keys(assessmentDoc.responses).length} fields` : 'missing',
+      pdfData: assessmentDoc.pdfData ? 'present' : 'missing',
+      reportText: assessmentDoc.reportText ? assessmentDoc.reportText.substring(0, 100) + '...' : 'missing',
+      assessmentType: assessmentDoc.assessmentType
+    }, null, 2));
+
+    const assessment = new Assessment(assessmentDoc);
+
+    // Save to database
+    console.log('🔵 Saving to MongoDB...');
+    const savedAssessment = await assessment.save();
+    console.log('✅ MongoDB save successful!');
+    
+    console.log(`✅ Assessment saved successfully: ${savedAssessment._id}`);
+    
+    res.status(201).json({
+      success: true,
+      assessmentId: savedAssessment._id,
+      savedAt: savedAssessment.createdAt,
+      message: 'Assessment saved successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Error saving assessment:', error);
+    res.status(500).json({ 
+      error: 'Failed to save assessment', 
+      details: error.message 
+    });
+  }
+});
+
+// Send assessment completion email
+app.post('/api/send-assessment-email', async (req, res) => {
+  try {
+    const { assessmentId, userDetails, assessmentType, pdfBuffer, reportText: reportTextFromBody } = req.body;
+
+    // If assessmentId provided, fetch from database
+    let user = userDetails;
+    let type = assessmentType || 'Building';
+    let pdf = pdfBuffer;
+
+    let reportText = reportTextFromBody || '';
+    let assessment = null;
+    if (assessmentId) {
+      assessment = await Assessment.findById(assessmentId);
+      if (!assessment) {
+        return res.status(404).json({ error: 'Assessment not found' });
+      }
+
+      user = assessment.userDetails || user;
+      type = assessment.assessmentType || type;
+      pdf = assessment.pdfData?.data || pdf;
+      // Prefer server-stored reportText if available
+      if (!reportText && assessment.reportText) {
+        reportText = assessment.reportText;
+      }
+    }
+
+    // Validate email details
+    if (!user || !user.email || !user.name) {
+      return res.status(400).json({ 
+        error: 'Missing required user details (name, email)' 
+      });
+    }
+
+    // Convert base64 to buffer if needed
+    let pdfBuf = null;
+    if (pdf) {
+      pdfBuf = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf, 'base64');
+    }
+
+    console.log('📧 Sending marketing email to user...');
+
+    // Send client email (pure marketing template - no PDF, no report)
+    const emailResult = await sendAssessmentCompletionEmail(user, type, pdfBuf);
+
+    if (emailResult.success) {
+      // Update database if assessmentId provided
+      if (assessmentId) {
+        await Assessment.findByIdAndUpdate(assessmentId, {
+          emailSent: true,
+          emailSentAt: getISTTimestamp()
+        });
+      }
+
+      console.log(`✅ Client email sent to: ${user.email}`);
+      
+      // Ensure admin receives the final AI report text and PDF attachment (regenerate PDF if needed)
+      try {
+        // ALWAYS generate comprehensive server-side AI report for admin PDF
+        // This ensures Cloudinary gets the full GROQ-generated report, not the client mock
+        try {
+          console.log('⏳ Generating comprehensive AI report on server (this may take a moment)...');
+          const genRes = await axios.post(`http://localhost:${process.env.PORT || 5000}/api/generate-building-report`, {
+            user_details: user,
+            assessment_responses: assessment ? assessment.assessmentResponses : undefined
+          }, { timeout: 120000 });
+
+          if (genRes && genRes.data && genRes.data.report) {
+            reportText = genRes.data.report;
+            console.log('✅ Server-generated AI report received, length:', reportText.length);
+            // Persist comprehensive report to DB
+            if (assessmentId) {
+              await Assessment.findByIdAndUpdate(assessmentId, { reportText, updatedAt: getISTTimestamp() });
+            }
+          } else {
+            console.warn('⚠️ Server generate-building-report did not return a report; using existing text if available');
+          }
+        } catch (genErr) {
+          console.error('❌ Failed to generate server-side AI report:', genErr.message);
+          // Fall back to saved report text if generation fails
+          if (!reportText && assessment && assessment.reportText) {
+            reportText = assessment.reportText;
+            console.log('⚠️ Using saved report text from DB, length:', reportText.length);
+          }
+        }
+
+        // ALWAYS generate comprehensive server-side PDF for Cloudinary upload
+        // This ensures the uploaded PDF has proper formatting and full AI report content
+        let pdfBuf = null;
+        try {
+          console.log('🔄 Generating comprehensive server-side PDF for Cloudinary...');
+          
+          // Use the comprehensive PDF endpoint to get properly formatted PDF
+          const pdfResponse = await axios.post(
+            `http://localhost:${process.env.PORT || 5000}/api/generate-building-report-pdf`,
+            {
+              user_details: user,
+              assessment_responses: assessment ? assessment.assessmentResponses : undefined,
+              reportText: reportText
+            },
+            { 
+              responseType: 'arraybuffer',
+              timeout: 60000 
+            }
+          );
+          
+          if (pdfResponse && pdfResponse.data && pdfResponse.data.byteLength > 0) {
+            pdfBuf = Buffer.from(pdfResponse.data);
+            console.log('✅ Comprehensive server PDF generated, size:', pdfBuf.length, 'bytes');
+            
+            // Save comprehensive PDF to DB if assessment exists
+            if (assessmentId) {
+              await Assessment.findByIdAndUpdate(assessmentId, { 
+                'pdfData.data': pdfBuf, 
+                'pdfData.size': pdfBuf.length, 
+                'pdfData.generatedAt': getISTTimestamp() 
+              });
+            }
+          } else {
+            console.warn('⚠️ PDF endpoint returned empty response');
+          }
+        } catch (regenErr) {
+          console.error('❌ Failed to generate comprehensive server PDF:', regenErr.message);
+          // Fallback: use client PDF if server generation fails
+          if (pdf) {
+            pdfBuf = Buffer.isBuffer(pdf) ? pdf : Buffer.from(pdf, 'base64');
+            console.log('⚠️ Using client PDF as fallback, size:', pdfBuf.length);
+          }
+        }
+
+        // Upload PDF to Cloudinary if configured
+        let cloudinaryUrl = null;
+        let cloudinaryPublicId = null;
+        if (process.env.CLOUDINARY_CLOUD_NAME && pdfBuf) {
+          try {
+            const cloudinaryService = require('./services/cloudinaryService');
+            const publicId = `report_${assessmentId || Date.now()}_${(user && user.name ? user.name.replace(/\s+/g, '_') : 'anon')}`;
+            console.log('⬆️ Uploading PDF to Cloudinary with publicId:', publicId);
+            const uploadResult = await cloudinaryService.uploadPdfBuffer(pdfBuf, publicId);
+            if (uploadResult && uploadResult.secure_url) {
+              cloudinaryUrl = uploadResult.secure_url;
+              cloudinaryPublicId = uploadResult.public_id;
+              console.log('✅ Uploaded PDF to Cloudinary:', cloudinaryUrl);
+              // Persist Cloudinary metadata to DB if assessment exists
+              if (assessmentId) {
+                await Assessment.findByIdAndUpdate(assessmentId, {
+                  'pdfData.cloudinaryPublicId': cloudinaryPublicId,
+                  'pdfData.cloudinaryUrl': cloudinaryUrl,
+                  'pdfData.size': pdfBuf.length,
+                  'pdfData.generatedAt': getISTTimestamp()
+                });
+              }
+              // Append Cloudinary link to report text for admin visibility
+              reportText = (reportText || '') + `\n\nPDF stored at: ${cloudinaryUrl}`;
+            }
+          } catch (uploadErr) {
+            console.error('❌ Cloudinary upload failed:', uploadErr && uploadErr.message ? uploadErr.message : uploadErr);
+          }
+        }
+
+        // Admin notification email disabled per user request
+        // const adminEmailResult = await sendAdminNotificationEmail(
+        //   user,
+        //   type,
+        //   reportText || 'No report text available',
+        //   pdfBuf,
+        //   assessmentId
+        // );
+        // if (adminEmailResult.success) {
+        //   console.log(`✅ Admin notification email sent with report text${pdfBuf ? ' and PDF attachment' : ''}`);
+        // } else {
+        //   console.warn(`⚠️ Admin notification failed: ${adminEmailResult.error}`);
+        // }
+      } catch (adminError) {
+        console.error('❌ Error sending admin notification:', adminError.message);
+      }
+      
+      res.status(200).json({
+        success: true,
+        message: 'Email sent successfully',
+        messageId: emailResult.messageId
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to send email',
+        details: emailResult.error
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Error sending assessment email:', error);
+    res.status(500).json({ 
+      error: 'Failed to send email', 
+      details: error.message 
+    });
+  }
+});
+
+// Submit assessment: generate AI report, PDF, upload to Cloudinary, save to DB and  send emails
+app.post('/api/submit-assessment', async (req, res) => {
+  try {
+    const { userDetails, assessmentResponses, assessmentType = 'Building' } = req.body;
+
+    if (!userDetails || !userDetails.email || !userDetails.name) {
+      return res.status(400).json({ error: 'Missing required user details (name, email)' });
+    }
+
+    const baseUrl = `http://localhost:${process.env.PORT || 5000}`;
+
+    // 1) ALWAYS generate comprehensive report on server (not using frontend report)
+    console.log('⏳ [submit-assessment] Generating comprehensive 60KB+ AI report on server...');
+    let reportText = '';
+    
+    try {
+      const genRes = await axios.post(`${baseUrl}/api/generate-building-report`, {
+        user_details: userDetails,
+        assessment_responses: assessmentResponses
+      }, { timeout: 120000 });
+
+      if (genRes && genRes.data && genRes.data.report) {
+        reportText = genRes.data.report;
+        console.log('✅ [submit-assessment] Server generated report length:', reportText.length, 'characters');
+        console.log('✅ [submit-assessment] This ensures Cloudinary gets the full 60KB+ report');
+      } else {
+        console.warn('⚠️ [submit-assessment] generate-building-report returned no report');
+      }
+    } catch (err) {
+      console.error('❌ [submit-assessment] GROQ report generation failed:', err.message);
+      throw new Error('Failed to generate AI report on server: ' + err.message);
+    }
+
+    // 2) Generate comprehensive PDF from reportText
+    console.log('🔄 [submit-assessment] Generating PDF from reportText...');
+    let pdfBuf = null;
+    try {
+      pdfBuf = await generatePdfBufferFromReport(reportText || '', userDetails);
+      console.log('✅ [submit-assessment] PDF generated, size:', pdfBuf.length);
+    } catch (err) {
+      console.error('❌ [submit-assessment] PDF generation failed:', err.message);
+    }
+
+    // 3) Upload PDF to Cloudinary if available
+    let cloudinaryUrl = null;
+    let cloudinaryPublicId = null;
+    if (process.env.CLOUDINARY_CLOUD_NAME && pdfBuf) {
+      try {
+        const cloudinaryService = require('./services/cloudinaryService');
+        const publicId = `report_${Date.now()}_${(userDetails.name || 'anon').replace(/\s+/g, '_')}`;
+        console.log('⬆️ [submit-assessment] Uploading PDF to Cloudinary with publicId:', publicId);
+        const uploadResult = await cloudinaryService.uploadPdfBuffer(pdfBuf, publicId);
+        if (uploadResult && uploadResult.secure_url) {
+          cloudinaryUrl = uploadResult.secure_url;
+          cloudinaryPublicId = uploadResult.public_id;
+          console.log('✅ [submit-assessment] Uploaded PDF to Cloudinary:', cloudinaryUrl);
+        }
+      } catch (err) {
+        console.error('❌ [submit-assessment] Cloudinary upload failed:', err.message || err);
+      }
+    }
+
+    // 4) Normalize and persist assessment to DB with server-generated report and PDF
+    // Ensure all raw responses are preserved and formatted responses are stored separately
+    const originalResponses = assessmentResponses || {};
+    const rawResponses = originalResponses.raw_responses || originalResponses;
+    const formattedResponses = originalResponses.formatted_responses || originalResponses.formatted || null;
+
+    const pdfData = pdfBuf ? {
+      filename: `OSHAM_Assessment_${userDetails.name.replace(/\s+/g, '_')}_${Date.now()}.pdf`,
+      contentType: 'application/pdf',
+      size: pdfBuf.length,
+      data: pdfBuf,
+      cloudinaryPublicId: cloudinaryPublicId || '',
+      cloudinaryUrl: cloudinaryUrl || '',
+      generatedAt: getISTTimestamp()
+    } : null;
+
+    const assessmentDoc = new Assessment({
+      userDetails: {
+        name: userDetails.name,
+        email: userDetails.email,
+        phone: userDetails.phone || '',
+        organization: userDetails.organization || '',
+        structureType: userDetails.structureType || assessmentType,
+        q1: userDetails.q1 || '',  // Nature of expertise
+        q1Other: userDetails.q1Other || '',  // Custom expertise (when "Others" selected)
+        yearOfConstruction: userDetails.yearOfConstruction || null,
+        location: userDetails.location || ''
+      },
+      assessmentResponses: {
+        raw_responses: rawResponses,
+        formatted_responses: formattedResponses,
+        _rawOriginal: originalResponses
+      },
+      // Also keep a flattened copy of raw responses for easy querying
+      responses: rawResponses || {},
+      pdfData: pdfData,
+      reportText: reportText || '',
+      assessmentType: assessmentType,
+      status: 'completed'
+    });
+
+    console.log('🔵 [submit-assessment] Saving assessment to MongoDB...');
+    console.log('🔵 [submit-assessment] Responses field has:', Object.keys(assessmentDoc.responses || {}).length, 'fields');
+    const saved = await assessmentDoc.save();
+    console.log('✅ [submit-assessment] Assessment saved:', saved._id);
+
+    // 5) Send marketing email to user (no attachment)
+    try {
+      await sendAssessmentCompletionEmail(saved.userDetails, assessmentType, null);
+      console.log('✅ [submit-assessment] Client marketing email sent');
+      await Assessment.findByIdAndUpdate(saved._id, { emailSent: true, emailSentAt: getISTTimestamp() });
+    } catch (err) {
+      console.error('❌ [submit-assessment] Failed to send client email:', err.message || err);
+    }
+
+    // 6) Admin notification email disabled per user request
+    // try {
+    //   const adminResult = await sendAdminNotificationEmail(saved.userDetails, assessmentType, reportText || '', pdfBuf, saved._id);
+    //   if (adminResult.success) {
+    //     console.log('✅ [submit-assessment] Admin notification email sent');
+    //   } else {
+    //     console.warn('⚠️ [submit-assessment] Admin email send responded with error:', adminResult.error);
+    //   }
+    // } catch (err) {
+    //   console.error('❌ [submit-assessment] Failed to send admin email:', err.message || err);
+    // }
+
+    // 7) Return saved assessment info and Cloudinary link
+    return res.status(201).json({ success: true, assessmentId: saved._id, cloudinaryUrl: cloudinaryUrl || null });
+
+  } catch (error) {
+    console.error('❌ [submit-assessment] Error:', error && error.stack ? error.stack : error.message || error);
+    res.status(500).json({ error: 'Failed to submit assessment', details: error && error.message ? error.message : String(error) });
+  }
+});
+
+// Get assessment by ID
+app.get('/api/assessment/:id', async (req, res) => {
+  try {
+    const assessment = await Assessment.findById(req.params.id)
+      .select('-pdfData.data'); // Exclude large PDF data by default
+    
+    if (!assessment) {
+      return res.status(404).json({ error: 'Assessment not found' });
+    }
+    
+    res.json(assessment);
+  } catch (error) {
+    console.error('❌ Error fetching assessment:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch assessment', 
+      details: error.message 
+    });
+  }
+});
+
+// Get assessment PDF
+app.get('/api/assessment/:id/pdf', async (req, res) => {
+  try {
+    const assessment = await Assessment.findById(req.params.id);
+    
+    if (!assessment) {
+      return res.status(404).json({ error: 'Assessment not found' });
+    }
+    
+    if (!assessment.pdfData || !assessment.pdfData.data) {
+      return res.status(404).json({ error: 'PDF not found for this assessment' });
+    }
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${assessment.pdfData.filename}"`);
+    res.send(assessment.pdfData.data);
+    
+  } catch (error) {
+    console.error('❌ Error fetching PDF:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch PDF', 
+      details: error.message 
+    });
+  }
+});
+
+// List user assessments by email
+app.get('/api/assessments/user/:email', async (req, res) => {
+  try {
+    // Allow caller to request inclusion of full responses via query param
+    // e.g. /api/assessments/user/:email?includeResponses=true
+    const includeResponses = String(req.query.includeResponses || '').toLowerCase() === 'true';
+
+    let query = Assessment.find({ 'userDetails.email': req.params.email })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    if (includeResponses) {
+      // exclude only the large PDF binary but keep assessmentResponses
+      query = query.select('-pdfData.data');
+    } else {
+      // default: hide full responses to keep payload small
+      query = query.select('-pdfData.data -assessmentResponses');
+    }
+
+    const assessments = await query.exec();
+
+    res.json({
+      count: assessments.length,
+      assessments: assessments
+    });
+  } catch (error) {
+    console.error('❌ Error fetching user assessments:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch assessments', 
+      details: error.message 
+    });
+  }
+});
+
+// Contact form endpoint
+app.post('/api/contact-form', async (req, res) => {
+  try {
+    const formData = req.body;
+    
+    if (!formData.email || !formData.fullName) {
+      return res.status(400).json({ 
+        error: 'Missing required fields (email, fullName)' 
+      });
+    }
+
+    // Import contact email sender
+    const { sendContactFormEmail } = require('./services/emailService');
+    
+    // Send email to admin
+    const emailResult = await sendContactFormEmail(formData);
+    
+    if (emailResult.success) {
+      console.log(`✅ Contact form email sent for: ${formData.fullName}`);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Contact form submitted successfully'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to send contact form email'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error processing contact form:', error);
+    res.status(500).json({ 
+      error: 'Failed to process contact form', 
+      details: error.message 
+    });
+  }
+});
+
+// Mount auth routes
+app.use('/api/auth', authRoutes);
+
+// Mount admin routes
+app.use('/api/admin', adminRoutes);
+
+// Mount payment routes
+app.use('/api/payment', paymentRoutes);
+
+// User Reports - Get all assessments for logged-in user
+app.get('/api/user/assessments', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    
+    const assessments = await Assessment.find({ 'userDetails.email': userEmail })
+      .select('assessmentType userDetails.structureType createdAt submittedAt adminReport pdfData.cloudinaryUrl')
+      .sort({ createdAt: -1 });
+    
+    const assessmentsWithReportStatus = assessments.map((assessment, index) => ({
+      _id: assessment._id,
+      assessmentNumber: assessments.length - index, // Assessment 1, 2, 3...
+      assessmentType: assessment.assessmentType,
+      structureType: assessment.userDetails?.structureType || 'N/A',
+      submittedAt: assessment.submittedAt || assessment.createdAt,
+      hasAdminReport: !!assessment.adminReport?.gridFsFileId,
+      adminReportUrl: assessment.adminReport?.gridFsFileId ? `/api/proxy/pdf/${assessment._id}` : null,
+      aiReportUrl: assessment.pdfData?.cloudinaryUrl
+    }));
+    
+    res.json({ success: true, assessments: assessmentsWithReportStatus });
+  } catch (error) {
+    console.error('Error fetching user assessments:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch assessments' });
+  }
+});
+
+// PDF Proxy endpoint - serves PDFs with proper headers for inline viewing
+app.get('/api/proxy/pdf/:assessmentId', authenticateToken, async (req, res) => {
+  try {
+    const { assessmentId } = req.params;
+    const userEmail = req.user.email;
+    
+    // Find assessment and verify ownership
+    const assessment = await Assessment.findById(assessmentId);
+    
+    if (!assessment) {
+      return res.status(404).json({ success: false, message: 'Assessment not found' });
+    }
+    
+    // Verify user owns this assessment
+    if (assessment.userDetails.email !== userEmail) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    
+    if (!assessment.adminReport?.gridFsFileId) {
+      return res.status(404).json({ success: false, message: 'Report not found' });
+    }
+    
+    // Stream PDF from GridFS
+    const fileId = assessment.adminReport.gridFsFileId;
+    console.log('📄 Streaming PDF from GridFS:', fileId);
+    
+    // Set proper headers for inline PDF viewing
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="assessment_report.pdf"');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    
+    // Create download stream from GridFS
+    const downloadStream = gridFSBucket.openDownloadStream(new mongoose.Types.ObjectId(fileId));
+    
+    downloadStream.on('error', (error) => {
+      console.error('GridFS download error:', error);
+      if (!res.headersSent) {
+        res.status(404).json({ success: false, message: 'File not found in storage' });
+      }
+    });
+    
+    // Pipe the file stream directly to response
+    downloadStream.pipe(res);
+    
+  } catch (error) {
+    console.error('Error proxying PDF:', error);
+    res.status(500).json({ success: false, message: 'Failed to load PDF' });
+  }
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    database: dbStatus,
+    mongodb: MONGODB_URI ? 'configured' : 'not configured'
+  });
+});
+
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+  console.log(`Building Assessment API server running on port ${PORT}`);
+  console.log(`GROQ_API_KEY configured: ${GROQ_API_KEY ? 'Yes' : 'No'}`);
+});
+
+server.on('error', (err) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Close the process using that port or set PORT env var to a free port.`);
+  } else {
+    console.error('Server error:', err);
+  }
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err && err.stack ? err.stack : err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+});

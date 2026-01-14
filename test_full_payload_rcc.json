@@ -1,0 +1,55 @@
+{
+  "userDetails": {
+    "name": "Test User",
+    "email": "test@example.com",
+    "phone": "9999999999",
+    "location": "TestCity",
+    "structureType": "RCC Frame"
+  },
+  "assessmentResponses": {
+    "q1_age": "25",
+    "q1_ageRange": "20-30",
+    "q1_city": "TestCity",
+    "q1_country": "India",
+
+    "q5_structural_system": "RCC Structure",
+    "q2_usage": ["Commercial"],
+
+    "q3_exposure_type": "Coastal / Industrial / Harsh Environment",
+    "q3_exposure_other": "",
+
+    "q4_floors_added": "No",
+    "q4_floors_added_after": "No",
+    "q4_floors_details": "",
+    "q4_heavy_machinery": "No",
+
+    "q6_rcc_has_cracks": "Yes",
+    "q6_rcc_crack_elements": ["Beams", "Columns"],
+    "q6_rcc_crack_elements_other": "",
+    "q6_rcc_beam_locations": ["Beam soffit"],
+    "q6_rcc_beam_locations_other": "",
+    "q6_rcc_column_locations": ["Column face"],
+    "q6_rcc_column_locations_other": "",
+    "q6_rcc_deformation": "No",
+
+    "q7_rcc_spalling_has": "Yes",
+    "q7_rcc_spalling_elements": ["Beam soffit"],
+
+    "q8a_rcc_damp_has": "No",
+    "q8a_rcc_damp_elements": [],
+
+    "q9_rcc_corrosion_has": "Yes",
+    "q9_rcc_corrosion_elements": ["Beam reinforcement", "Column reinforcement"],
+
+    "q10_rcc_vibration_has": "Yes",
+    "q10_rcc_vibration_sources": ["Nearby construction"],
+
+    "q11_rcc_soil_types": ["Medium dense sand"],
+    "q11_rcc_ground_issues_has": "No",
+    "q11_rcc_ground_issues": [],
+
+    "q12_rcc_disaster_has": "No",
+
+    "q13_rcc_expert_intervention_has": "Yes"
+  }
+}

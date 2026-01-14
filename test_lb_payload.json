@@ -1,0 +1,37 @@
+{
+  "user_details": {
+    "name": "Test User",
+    "email": "test@example.com",
+    "phone": "9999999999",
+    "location": "TestCity",
+    "structureType": "Load Bearing Masonry"
+  },
+  "assessment_responses": {
+    "raw_responses": {
+      "q1_age": "40",
+      "q1_ageRange": "30-50",
+      "q1_city": "TestCity",
+      "q1_country": "India",
+      "q5_structural_system": "Load Bearing Masonry",
+      "q2_usage": ["Residential"],
+      "q6_lb_has_cracks": "Yes",
+      "q6_lb_crack_elements": ["Load Bearing Wall", "Lintel"],
+      "q6_lb_wall_locations": ["Middle section of the Load Bearing Wall"],
+      "q6_lb_lintel_locations": ["Along the length of Lintel"],
+      "q6_lb_lintel_orientations": ["Horizontal"],
+      "q6_lb_deformation": "No",
+      "q7_lb_spalling_has": "No",
+      "q8a_lb_damp_has": "Yes",
+      "q8a_lb_damp_elements": ["Load Bearing Wall"],
+      "q9_lb_corrosion_has": "Yes",
+      "q9_lb_corrosion_elements": ["Steel lintels"],
+      "q10_lb_vibration_has": "No",
+      "q11_lb_soil_types": ["Soft Soil (loose sand, silty clay and soft clay)"],
+      "q11_lb_ground_issues_has": "Yes",
+      "q11_lb_ground_issues": ["Water stagnation around the building due to inadequate surface or underground drainage"],
+      "q12_lb_disaster_has": "No",
+      "q13_lb_expert_intervention_has": "No"
+    }
+  },
+  "assessmentType": "Building"
+}

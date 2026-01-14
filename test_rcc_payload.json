@@ -1,0 +1,37 @@
+{
+  "userDetails": {
+    "name": "RCC Test User",
+    "email": "rcc@example.com",
+    "phone": "8888888888",
+    "location": "Mumbai",
+    "structureType": "RCC Frame"
+  },
+  "assessmentResponses": {
+    "raw_responses": {
+      "q1_age": "25",
+      "q1_ageRange": "20-30",
+      "q1_city": "Mumbai",
+      "q1_country": "India",
+      "q5_structural_system": "RCC Frame",
+      "q2_usage": ["Commercial"],
+      "q6_rcc_has_cracks": "Yes",
+      "q6_rcc_crack_elements": ["Beams", "Columns"],
+      "q6_rcc_crack_orientation": ["Vertical", "Diagonal"],
+      "q6_rcc_crack_location": ["Mid-span", "Supports"],
+      "q6_rcc_deformation": "No",
+      "q7_rcc_spalling_has": "Yes",
+      "q7_rcc_spalling": ["Beam soffit", "Column face"],
+      "q8a_damp_has": "No",
+      "q9_rcc_corrosion_has": "Yes",
+      "q9_rcc_corrosion_elements": ["Beam reinforcement", "Column reinforcement"],
+      "q13_rcc_vibration": "Yes",
+      "q13_rcc_vibration_sources": ["Heavy traffic on adjacent road"],
+      "q11_soil_types": ["Medium Dense Sand"],
+      "q11_ground_issues_has": "No",
+      "q12_disaster_has": "No",
+      "q13_expert_intervention_has": "Yes",
+      "q13_expert_intervention_types": ["Detailed Structural Assessment"]
+    }
+  },
+  "assessmentType": "Building"
+}

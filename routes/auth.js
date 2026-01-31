@@ -40,27 +40,26 @@ const verifyToken = (req, res, next) => {
 router.post('/register', async (req, res) => {
   try {
     const { firstName, lastName, email, phone, password, organisation } = req.body;
-    console.log('📝 Registration attempt:', { firstName, lastName, email, phone, hasPassword: !!password, organisation });
 
     // Validate required fields
     if (!firstName || !lastName || !email || !phone || !password) {
-      console.log('❌ Validation failed - missing fields:', {
-        hasFirstName: !!firstName,
-        hasLastName: !!lastName,
-        hasEmail: !!email,
-        hasPhone: !!phone,
-        hasPassword: !!password
-      });
       return res.status(400).json({
         success: false,
         message: 'All fields are required'
       });
     }
 
+    // Validate name fields
+    if (firstName.trim().length === 0 || lastName.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'First name and last name cannot be empty'
+      });
+    }
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      console.log('❌ Invalid email format:', email);
       return res.status(400).json({
         success: false,
         message: 'Invalid email format'
@@ -69,17 +68,23 @@ router.post('/register', async (req, res) => {
 
     // Validate password strength (minimum 6 characters)
     if (password.length < 6) {
-      console.log('❌ Password too short:', password.length);
       return res.status(400).json({
         success: false,
         message: 'Password must be at least 6 characters long'
       });
     }
 
+    // Validate phone number (basic check for minimum length)
+    if (phone.trim().length < 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid phone number'
+      });
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
-      console.log('⚠️ User already exists:', { email, isVerified: existingUser.isVerified });
       return res.status(400).json({
         success: false,
         message: 'User with this email already exists'
@@ -99,7 +104,6 @@ router.post('/register', async (req, res) => {
 
     // Save user to database
     await user.save();
-    console.log('✅ User registered successfully:', { email: user.email, isVerified: user.isVerified });
 
     // Return success and auto-login prompt
     res.status(201).json({

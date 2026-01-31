@@ -61,7 +61,7 @@ const assessmentSchema = new mongoose.Schema({
   // Metadata
   assessmentType: {
     type: String,
-    enum: ['Bridge', 'Building', 'Tower', 'Other'],
+    enum: ['Bridge', 'Building', 'Tower', 'Tunnel', 'Other'],
     required: true
   },
   

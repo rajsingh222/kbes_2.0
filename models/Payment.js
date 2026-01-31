@@ -30,7 +30,7 @@ const paymentSchema = new mongoose.Schema({
   // Payment Details
   amount: {
     type: Number,
-    required: true // Amount in paise (100 rupees = 10000 paise)
+    required: true // Amount in paise (250 rupees = 25000 paise)
   },
   currency: {
     type: String,
@@ -56,7 +56,7 @@ const paymentSchema = new mongoose.Schema({
   },
   assessmentType: {
     type: String,
-    enum: ['Building', 'Load Bearing', null],
+    enum: ['Building', 'Load Bearing', 'Tunnel', 'Bridge', null],
     default: null
   },
   usedAt: {
@@ -84,7 +84,7 @@ const paymentSchema = new mongoose.Schema({
 // Indexes for faster queries
 paymentSchema.index({ userId: 1, createdAt: -1 });
 paymentSchema.index({ userEmail: 1, status: 1 });
-paymentSchema.index({ razorpayOrderId: 1 });
+// razorpayOrderId already has unique index from schema definition, so no need to duplicate
 paymentSchema.index({ razorpayPaymentId: 1 });
 paymentSchema.index({ status: 1, assessmentUsed: 1 });
 

@@ -7,15 +7,30 @@ const fs = require('fs');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const { GridFSBucket } = require('mongodb');
+const helmet = require('helmet');
 require('dotenv').config();
 
 const app = express();
 
+// Security Middleware
+const { sanitizeInput } = require('./middleware/securityMiddleware');
+const { apiLimiter, authLimiter, paymentLimiter, reportLimiter } = require('./middleware/rateLimiter');
+
+// Apply Helmet for security headers
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP as it may conflict with inline scripts
+  crossOriginEmbedderPolicy: false
+}));
+
 // Trust proxy - CRITICAL for Render/Railway/Heroku to get real client IP
-app.set('trust proxy', true);
+// Use 1 instead of true to prevent IP spoofing (express-rate-limit requirement)
+app.set('trust proxy', 1);
 
 app.use(express.json({ limit: '50mb' })); // Increased limit for PDF data
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Apply input sanitization middleware to prevent NoSQL injection
+app.use(sanitizeInput);
 
 // CORS configuration for production
 const corsOptions = {
@@ -24,6 +39,9 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
+
+// Apply general rate limiting to all API routes
+app.use('/api/', apiLimiter);
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/osham_assessments';
@@ -341,7 +359,7 @@ Disclaimer: This preliminary assessment is based on questionnaire responses and 
 }
 
 // Endpoint to generate building health report
-app.post('/api/generate-building-report', async (req, res) => {
+app.post('/api/generate-building-report', reportLimiter, async (req, res) => {
   try {
     console.log('Incoming /api/generate-building-report body keys:', Object.keys(req.body || {}));
     const user_details = req.body.user_details || req.body.userDetails || {};
@@ -555,7 +573,7 @@ Q10 - VIBRATION & DYNAMIC LOADING (LOAD BEARING MASONRY):
 User Feels Vibration: ${formatValue(actualResponses.q10_lb_vibration_has)}
 ${actualResponses.q10_lb_vibration_has === 'Yes' ? `Vibration Sources: ${formatValue(actualResponses.q10_lb_vibration_sources)}${actualResponses.q10_lb_vibration_sources_other ? ` | Custom: ${actualResponses.q10_lb_vibration_sources_other}` : ''}` : ''}
 
-Q11 - FOUNDATION SOIL & GROUND CONDITIONS (LOAD BEARING MASONRY):
+Q11 - Soil foundation & ground conditionS (LOAD BEARING MASONRY):
 Soil Types: ${formatValue(actualResponses.q11_lb_soil_types)}${actualResponses.q11_lb_soil_types_other ? ` | Custom: ${actualResponses.q11_lb_soil_types_other}` : ''}
 Ground Issues Present: ${formatValue(actualResponses.q11_lb_ground_issues_has)}
 ${actualResponses.q11_lb_ground_issues_has === 'Yes' ? `Ground Issues: ${formatValue(actualResponses.q11_lb_ground_issues)}${actualResponses.q11_lb_ground_issues_other ? ` | Custom: ${actualResponses.q11_lb_ground_issues_other}` : ''}` : ''}
@@ -596,7 +614,7 @@ Q10 - VIBRATION & DYNAMIC LOADING (RCC FRAME):
 User Feels Vibration: ${formatValue(actualResponses.q13_rcc_vibration)}
 ${actualResponses.q13_rcc_vibration === 'Yes' ? `Vibration Sources: ${formatValue(actualResponses.q13_rcc_vibration_sources)}${actualResponses.q13_rcc_vibration_sources_other ? ` | Custom: ${actualResponses.q13_rcc_vibration_sources_other}` : ''}` : ''}
 
-Q11 - FOUNDATION SOIL & GROUND CONDITIONS (RCC FRAME):
+Q11 - Soil foundation & ground conditionS (RCC FRAME):
 Soil Types: ${formatValue(actualResponses.q11_soil_types)}${actualResponses.q11_soil_types_other ? ` | Custom: ${actualResponses.q11_soil_types_other}` : ''}
 Ground Issues Present: ${formatValue(actualResponses.q11_ground_issues_has)}
 ${actualResponses.q11_ground_issues_has === 'Yes' ? `Ground Issues: ${formatValue(actualResponses.q11_ground_issues)}${actualResponses.q11_ground_issues_other ? ` | Custom: ${actualResponses.q11_ground_issues_other}` : ''}` : ''}
@@ -936,7 +954,7 @@ Q10 - VIBRATION & DYNAMIC LOADING:
 User Feels Vibration: ${actualResponses.q13_rcc_vibration || 'Not specified'}
 Vibration Sources: ${Array.isArray(actualResponses.q13_rcc_vibration_sources) ? actualResponses.q13_rcc_vibration_sources.join(', ') : 'None'}${actualResponses.q13_rcc_vibration_sources_other ? ` (${actualResponses.q13_rcc_vibration_sources_other})` : ''}
 
-Q11 - FOUNDATION SOIL & GROUND CONDITIONS:
+Q11 - Soil foundation & ground conditionS:
 Soil Types: ${Array.isArray(actualResponses.q11_soil_types) ? actualResponses.q11_soil_types.join(' | ') : 'Not specified'}${actualResponses.q11_soil_types_other ? ` (${actualResponses.q11_soil_types_other})` : ''}
 Ground Issues Present: ${actualResponses.q11_ground_issues_has || 'Not specified'}
 Ground Issues: ${Array.isArray(actualResponses.q11_ground_issues) ? actualResponses.q11_ground_issues.join(', ') : 'None'}${actualResponses.q11_ground_issues_other ? ` (${actualResponses.q11_ground_issues_other})` : ''}
@@ -1470,6 +1488,814 @@ FORMATTING REQUIREMENTS FOR READABILITY:
   }
 });
 
+// ========================================
+// TUNNEL ASSESSMENT ENDPOINTS
+// ========================================
+
+// Generate tunnel health report using GROQ API
+app.post('/api/generate-tunnel-report', async (req, res) => {
+  try {
+    console.log('Incoming /api/generate-tunnel-report body keys:', Object.keys(req.body || {}));
+    const user_details = req.body.user_details || req.body.userDetails || {};
+    const assessment_responses = req.body.assessment_responses || req.body.assessmentResponses;
+
+    if (!assessment_responses) {
+      return res.status(400).json({ error: 'Missing assessment responses' });
+    }
+
+    // Unwrap the raw responses if they are wrapped
+    const actualResponses = assessment_responses.raw_responses || assessment_responses;
+
+    let report;
+    let usedMock = false;
+    let groqDebug = null;
+
+    // Use GROQ API if key is available
+    if (GROQ_API_KEY) {
+      console.log('Using GROQ API for tunnel report generation...');
+      console.log('📊 Tunnel Data Sample:');
+      console.log('  - Age Range:', actualResponses.q1_ageRange);
+      console.log('  - Location:', actualResponses.q1_city, actualResponses.q1_state);
+      console.log('  - Tunnel Length:', actualResponses.q1_tunnel_length);
+      console.log('  - Construction Method:', actualResponses.q2a_construction_method);
+      console.log('  - Lining System:', actualResponses.q2c_lining_system);
+      
+      // Build comprehensive tunnel data string
+      const formatValue = (val) => {
+        if (val === null || val === undefined || val === '') return 'Not specified';
+        if (Array.isArray(val)) return val.length > 0 ? val.join(', ') : 'Not specified';
+        return String(val);
+      };
+
+      // Get all tunnel response keys
+      const allKeys = Object.keys(actualResponses).sort();
+      const relevantResponsesFormatted = allKeys.map(key => {
+        const value = actualResponses[key];
+        if (value === null || value === undefined || value === '') return null;
+        return `${key}: ${formatValue(value)}`;
+      }).filter(Boolean).join('\n');
+
+      console.log('📊 Total tunnel response keys sent to AI:', allKeys.length);
+
+      // Build simpler, focused tunnel data for faster API response
+      const tunnelSummary = `
+TUNNEL BASIC INFORMATION:
+- Age: ${formatValue(actualResponses.q1_ageRange)}
+- Start Location: ${formatValue(actualResponses.q1_city)}, ${formatValue(actualResponses.q1_state)}
+- End Location: ${formatValue(actualResponses.q1_end_city)}, ${formatValue(actualResponses.q1_end_state)}
+- Passes Through: ${formatValue(actualResponses.q1_passes)}
+- Tunnel Length: ${formatValue(actualResponses.q1_tunnel_length)} km
+- Construction Method: ${formatValue(actualResponses.q2a_construction_method)}
+- Cross-Section: ${formatValue(actualResponses.q2b_cross_section)}
+- Lining System: ${formatValue(actualResponses.q2c_lining_system)}
+- Primary Usage: ${formatValue(actualResponses.q3_usage)}
+- Modifications Done: ${actualResponses.q4_additions_has === 'Yes' ? 'YES - ' + formatValue(actualResponses.q4_additions_types) : 'None'}
+- Heavy Machinery: ${formatValue(actualResponses.q4_heavy_machinery)}
+
+GEOLOGICAL & ENVIRONMENTAL CONDITIONS:
+- Ground Condition: ${formatValue(actualResponses.q5_ground_condition)}
+- Elevation: ${formatValue(actualResponses.q5_elevation)}
+- Environmental Exposure: ${formatValue(actualResponses.q6_environmental_exposure)}
+
+STRUCTURAL DISTRESS & DETERIORATION:
+- Cracks in Lining: ${actualResponses.q7_has_cracks === 'Yes' ? 'YES - Elements: ' + formatValue(actualResponses.q7_crack_elements) + ', Orientations: ' + formatValue(actualResponses.q7_crack_orientations) + ', Criticality: ' + formatValue(actualResponses.q7_criticality) : 'None observed'}
+- Deformation/Instability: ${actualResponses.q7b_has_deformation === 'Yes' ? 'YES - ' + formatValue(actualResponses.q7b_deformation_types) : 'None observed'}
+- Segment Joint Issues: ${actualResponses.q7c_has_joint_issues === 'Yes' ? 'YES - ' + formatValue(actualResponses.q7c_joint_issues) : 'None observed'}
+- Connection Bolts: ${actualResponses.q7d_bolts_visible === 'Yes' ? 'Visible - Condition: ' + formatValue(actualResponses.q7d_bolts_condition) + ', Severity: ' + formatValue(actualResponses.q7d_bolts_severity) : 'Not visible'}
+- Material Deterioration: ${actualResponses.q8_has_deterioration === 'Yes' ? 'YES - Locations: ' + formatValue(actualResponses.q8_deterioration_locations) + ', Types: ' + formatValue(actualResponses.q8_deterioration_types) + ', Severity: ' + formatValue(actualResponses.q8_deterioration_severity) : 'None observed'}
+
+WATER INGRESS & SEEPAGE:
+- Water Seepage: ${actualResponses.q9_has_seepage === 'Yes' ? 'YES - Locations: ' + formatValue(actualResponses.q9_seepage_locations) + ', Conditions: ' + formatValue(actualResponses.q9_seepage_conditions) + ', Paths: ' + formatValue(actualResponses.q9_seepage_paths) + ', Indicators: ' + formatValue(actualResponses.q9_visible_indicators) : 'None observed'}
+
+REINFORCEMENT & CORROSION:
+- Exposed Reinforcement: ${actualResponses.q10_has_reinf === 'Yes' ? 'YES - Locations: ' + formatValue(actualResponses.q10_reinf_locations) + ', Conditions: ' + formatValue(actualResponses.q10_reinf_conditions) : 'None observed'}
+
+GASKET & JOINT DEFECTS:
+- Gasket Defects: ${actualResponses.q11_has_gasket_defects === 'Yes' ? 'YES - Types: ' + formatValue(actualResponses.q11_defect_types) + ', Locations: ' + formatValue(actualResponses.q11_defect_locations) : 'None observed'}
+
+ROCK BOLTS & ANCHORS:
+- Rock Bolts Condition: ${actualResponses.q12_has_bolt_issues === 'Yes' ? 'Issues detected - ' + formatValue(actualResponses.q12_bolt_issues) : 'Good condition'}
+
+GROUTING & VOIDS:
+- Grouting Issues: ${actualResponses.q13_has_grout_issues === 'Yes' ? 'YES - ' + formatValue(actualResponses.q13_grout_observations) : 'None observed'}
+
+FIRE DAMAGE:
+- Fire Damage: ${actualResponses.q14_has_fire_damage === 'Yes' ? 'YES - Severity: ' + formatValue(actualResponses.q14_fire_severity) + ', Locations: ' + formatValue(actualResponses.q14_fire_locations) : 'None observed'}
+
+VENTILATION & AIR QUALITY:
+- Ventilation: ${actualResponses.q15_has_vent_issues === 'Yes' ? 'Issues present - ' + formatValue(actualResponses.q15_vent_observations) : 'Adequate'}
+
+DRAINAGE SYSTEM:
+- Drainage Issues: ${actualResponses.q16_has_drainage_issues === 'Yes' ? 'YES - ' + formatValue(actualResponses.q16_drainage_observations) : 'Functioning properly'}
+
+NATURAL DISASTERS:
+- Disaster History: ${actualResponses.q17_has_disaster === 'Yes' ? 'YES - ' + formatValue(actualResponses.q17_disaster_types) : 'None recorded'}
+
+EXPERT INTERVENTION:
+- Previous Interventions: ${actualResponses.q18_has_intervention === 'Yes' ? 'YES - ' + formatValue(actualResponses.q18_intervention_types) : 'None'}
+`;
+
+      const prompt = 'Generate a professional tunnel assessment report for this ' + (actualResponses.q1_ageRange || 'existing') + ' tunnel.\n\n' +
+        tunnelSummary + '\n\n' +
+        'Create a detailed technical report with these exact sections:\n\n' +
+        '1. OVERVIEW\n' +
+        'Summarize the tunnel (age ' + (actualResponses.q1_ageRange || 'unknown') + ', length ' + (actualResponses.q1_tunnel_length || 'unspecified') + 'km, location from ' + (actualResponses.q1_city || '') + ', ' + (actualResponses.q1_state || '') + ' to ' + (actualResponses.q1_end_city || '') + ', ' + (actualResponses.q1_end_state || '') + ', construction method ' + (actualResponses.q2a_construction_method || 'unspecified') + ', lining system ' + (actualResponses.q2c_lining_system || 'unspecified') + ', primary usage ' + (actualResponses.q3_usage || 'unspecified') + '), key findings, and overall health rating.\n\n' +
+        '2. KEY OBSERVATIONS\n' +
+        'Detail ALL observed issues based on the data above:\n' +
+        '- Structural distress (cracks, deformation, joint issues, bolt condition)\n' +
+        '- Material deterioration (spalling, scaling, weathering)\n' +
+        '- Water seepage (locations, conditions, severity)\n' +
+        '- Reinforcement exposure and corrosion\n' +
+        '- Gasket and joint defects\n' +
+        '- Rock bolts and anchor condition\n' +
+        '- Grouting issues and voids\n' +
+        '- Fire damage (if any)\n' +
+        '- Ventilation and drainage issues\n' +
+        '- Impact of natural disasters (if any)\n' +
+        'Be specific about locations, orientations, and severity levels from the data.\n\n' +
+        '3. RISK SUMMARY\n' +
+        'Categorize ALL findings into:\n' +
+        '- CRITICAL/HIGH RISK: Immediate safety issues requiring action within 0-1 month\n' +
+        '- MEDIUM RISK: Progressive deterioration requiring attention within 1-6 months\n' +
+        '- LOW RISK: Routine maintenance issues (6-24 months)\n' +
+        'Base this entirely on the observations listed above.\n\n' +
+        '4. TECHNICAL ASSESSMENT\n' +
+        'Analyze:\n' +
+        '- Structural integrity (lining, joints, connections, deformation)\n' +
+        '- Lining performance (' + (actualResponses.q2c_lining_system || 'specified') + ' system condition)\n' +
+        '- Water management (seepage patterns, drainage system)\n' +
+        '- Geological conditions and ground stability\n' +
+        '- Fire safety and ventilation\n' +
+        '- Construction quality and modifications\n' +
+        'Reference specific data points from the assessment.\n\n' +
+        '5. RECOMMENDATIONS\n' +
+        'Provide actionable recommendations by timeline based on observed issues:\n' +
+        '- IMMEDIATE (0-3 months): Safety measures, urgent repairs for critical issues\n' +
+        '- SHORT-TERM (3-12 months): Structural repairs, waterproofing, joint repairs\n' +
+        '- LONG-TERM (1-5 years): Monitoring systems, preventive maintenance, upgrade plans\n' +
+        'Be specific to THIS tunnel\'s observed conditions.\n\n' +
+        '6. CONCLUSION\n' +
+        'Final assessment, critical actions needed, service life prognosis, and need for detailed investigation. Reference the ' + (actualResponses.q1_tunnel_length || 'specified') + 'km tunnel\'s specific issues.\n\n' +
+        'Write detailed, technical content (4000-5000 words total). Use ONLY the data provided above. Be specific to this ' + (actualResponses.q1_ageRange || 'existing') + ' year old ' + (actualResponses.q2c_lining_system || 'tunnel') + ' tunnel.';
+
+      try {
+        console.log('🔄 Calling GROQ API...');
+        console.log('📊 Request details:');
+        console.log('  - Model:', GROQ_MODEL);
+        console.log('  - Prompt length:', prompt.length, 'characters');
+        console.log('  - Max tokens: 8000');
+        console.log('  - Timeout: 60 seconds');
+        
+        const startTime = Date.now();
+        
+        const response = await axios.post(
+          GROQ_API_URL,
+          {
+            model: GROQ_MODEL,
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a Professional Tunnel Engineer. Generate comprehensive tunnel assessment reports with 6 sections: OVERVIEW, KEY OBSERVATIONS, RISK SUMMARY, TECHNICAL ASSESSMENT, RECOMMENDATIONS, CONCLUSION. Write 4000-5000 words with technical detail.'
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            temperature: 0.7,
+            max_tokens: 8000,
+            top_p: 0.95
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${GROQ_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 90000  // Increased to 90 seconds
+          }
+        );
+
+        const elapsed = Date.now() - startTime;
+        console.log('✅ GROQ API responded in', elapsed, 'ms');
+
+        report = response.data.choices?.[0]?.message?.content;
+
+        if (!report) {
+          groqDebug = response.data;
+          console.warn('⚠️ GROQ returned unexpected response for tunnel, using fallback');
+          console.warn('Response data:', JSON.stringify(response.data).substring(0, 500));
+          report = generateMockTunnelReport(user_details, assessment_responses);
+          usedMock = true;
+        } else {
+          console.log('✅ GROQ generated report, length:', report.length, 'characters');
+        }
+      } catch (groqError) {
+        console.error('❌ GROQ API call failed for tunnel:');
+        console.error('  - Error type:', groqError.code || groqError.name || 'Unknown');
+        console.error('  - Message:', groqError.message);
+        if (groqError.code === 'ECONNABORTED') {
+          console.error('  - Cause: Request timeout (90 seconds exceeded)');
+          console.error('  - Solution: Try using smaller model or reduce prompt complexity');
+        }
+        if (groqError.response) {
+          console.error('  - HTTP Status:', groqError.response.status);
+          console.error('  - Response data:', JSON.stringify(groqError.response.data).substring(0, 500));
+          groqDebug = groqError.response.data;
+        } else {
+          console.error('  - No HTTP response received');
+          groqDebug = { error: groqError.message, code: groqError.code };
+        }
+        console.log('🔄 Falling back to mock tunnel report...');
+        report = generateMockTunnelReport(user_details, assessment_responses);
+        usedMock = true;
+      }
+    } else {
+      console.log('GROQ API key not configured. Using mock tunnel report...');
+      report = generateMockTunnelReport(user_details, assessment_responses);
+      usedMock = true;
+    }
+
+    const source = usedMock ? 'Mock (fallback)' : (GROQ_API_KEY ? 'GROQ API' : 'Mock Generator');
+    const resp = {
+      success: true,
+      report: report,
+      timestamp: new Date().toISOString(),
+      source
+    };
+
+    if (usedMock && groqDebug) {
+      resp.groq_debug = groqDebug;
+    }
+
+    console.log('📤 [generate-tunnel-report] Sending response to client:', {
+      success: resp.success,
+      reportLength: resp.report.length,
+      source: resp.source
+    });
+
+    res.json(resp);
+    console.log('✅ [generate-tunnel-report] Response sent successfully');
+
+  } catch (error) {
+    console.error('Error generating tunnel report:', error.message);
+    res.status(500).json({
+      error: 'Error generating tunnel report',
+      details: error.message
+    });
+  }
+});
+
+// Generate mock tunnel report (fallback)
+function generateMockTunnelReport(user_details, assessment_responses) {
+  const actualResponses = assessment_responses.raw_responses || assessment_responses;
+  
+  const tunnelAge = actualResponses.q1_ageRange || 'Unknown';
+  const tunnelLength = actualResponses.q1_tunnel_length || 'Not specified';
+  const location = actualResponses.q1_city || 'Not specified';
+  const liningSystem = actualResponses.q2c_lining_system || 'Not specified';
+  const constructionMethod = actualResponses.q2a_construction_method || 'Not specified';
+  
+  return `PRELIMINARY TUNNEL ASSESSMENT REPORT
+Generated: ${new Date().toLocaleDateString('en-IN')}
+Assessed by: Licensed Tunnel Engineer
+
+1. OVERVIEW
+This ${tunnelAge}-year-old tunnel with ${tunnelLength} km length located in ${location} has been assessed through a preliminary questionnaire-based evaluation. The tunnel was constructed using ${constructionMethod} with ${liningSystem} lining system. Overall structural health requires detailed on-site investigation. Immediate professional detailed assessment is recommended as per relevant tunnel safety standards.
+
+2. KEY OBSERVATIONS
+The following conditions have been identified during the preliminary assessment:
+
+• Lining Condition: ${liningSystem} showing signs of ${actualResponses.q6_rcc_has_cracks === 'Yes' ? 'cracking and structural distress' : 'age-related wear'}
+• Water Ingress: ${actualResponses.q9_has_seepage === 'Yes' ? 'Seepage and water leakage observed requiring immediate drainage assessment' : 'No significant water ingress reported'}
+• Material Deterioration: ${actualResponses.q8_has_deterioration === 'Yes' ? 'Concrete deterioration requiring repair' : 'Material condition requires monitoring'}
+• Reinforcement: ${actualResponses.q10_has_reinf === 'Yes' ? 'Exposed reinforcement with corrosion signs' : 'No exposed reinforcement reported'}
+
+3. RISK SUMMARY
+Based on preliminary data, recommend immediate detailed investigation to establish actual tunnel condition, safety margins and repair requirements.
+
+4. TECHNICAL ASSESSMENT
+Comprehensive tunnel inspection with Ground Penetrating Radar, ultrasonic testing, and structural analysis required to determine load-carrying capacity and safety factors.
+
+5. RECOMMENDATIONS
+• Immediate: Commission detailed tunnel investigation with NDT methods
+• Short-term: Execute repairs based on detailed findings
+• Long-term: Establish monitoring program and preventive maintenance schedule
+
+6. CONCLUSION
+Detailed professional assessment required to determine actual structural condition and safety. This preliminary report provides initial guidance only.
+
+Disclaimer: This preliminary assessment is based on questionnaire responses. Actual tunnel condition must be determined through on-site investigation by qualified tunnel engineer.`;
+}
+
+// Tunnel PDF generation endpoint
+app.post('/api/generate-tunnel-report-pdf', async (req, res) => {
+  try {
+    const user_details = req.body.user_details || req.body.userDetails || {};
+    const assessment_responses = req.body.assessment_responses || req.body.assessmentResponses;
+    let reportText = req.body.reportText || req.body.report_text || undefined;
+
+    if (!assessment_responses && !reportText) {
+      return res.status(400).json({ error: 'Missing assessment responses or reportText' });
+    }
+
+    const actualResponses = (assessment_responses && (assessment_responses.raw_responses || assessment_responses)) || {};
+
+    console.log('📄 Generating tunnel AI report and/or PDF...');
+    let usedMock = false;
+
+    if (reportText) {
+      console.log('Using provided reportText for tunnel PDF generation.');
+    } else if (GROQ_API_KEY) {
+      console.log('🤖 Using GROQ API to generate comprehensive tunnel report...');
+      
+      try {
+        const response = await axios.post(
+          `http://localhost:${process.env.PORT || 5000}/api/generate-tunnel-report`,
+          {
+            user_details,
+            assessment_responses
+          },
+          { timeout: 60000 }
+        );
+        reportText = response.data.report;
+        console.log('✅ GROQ API generated tunnel report successfully');
+      } catch (error) {
+        console.error('❌ GROQ API failed for tunnel:', error.message);
+        reportText = generateMockTunnelReport(user_details, assessment_responses);
+        usedMock = true;
+      }
+    } else {
+      console.log('⚠️ No GROQ API key, using mock tunnel report');
+      reportText = generateMockTunnelReport(user_details, assessment_responses);
+      usedMock = true;
+    }
+
+    if (!reportText || reportText.length < 100) {
+      throw new Error('Failed to generate valid tunnel report text');
+    }
+
+    // Generate PDF using same PDFKit logic as building assessment
+    const pdfBuffer = await generatePdfBufferFromReport(reportText, user_details);
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="Tunnel_Assessment_Report.pdf"');
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error('Tunnel PDF generation error:', error);
+    res.status(500).json({ error: 'Failed to generate tunnel PDF', details: error.message });
+  }
+});
+
+// Submit tunnel assessment: generate AI report, PDF, upload to Cloudinary, save to DB
+app.post('/api/submit-tunnel-assessment', async (req, res) => {
+  try {
+    console.log('🔵 [submit-tunnel-assessment] Starting tunnel submission...');
+    
+    const { userDetails, assessmentResponses } = req.body;
+
+    if (!userDetails || !userDetails.email || !userDetails.name) {
+      return res.status(400).json({ error: 'Missing required user details' });
+    }
+
+    if (!assessmentResponses) {
+      return res.status(400).json({ error: 'Missing assessment responses' });
+    }
+
+    const baseUrl = `http://localhost:${process.env.PORT || 5000}`;
+    let reportText = '';
+
+    // Generate comprehensive AI report on server
+    try {
+      console.log('⏳ [submit-tunnel-assessment] Generating comprehensive tunnel AI report...');
+      const genRes = await axios.post(`${baseUrl}/api/generate-tunnel-report`, {
+        user_details: userDetails,
+        assessment_responses: assessmentResponses
+      }, { timeout: 120000 });
+
+      if (genRes && genRes.data && genRes.data.report) {
+        reportText = genRes.data.report;
+        console.log('✅ [submit-tunnel-assessment] Server generated report length:', reportText.length);
+      } else {
+        console.warn('⚠️ [submit-tunnel-assessment] generate-tunnel-report returned no report');
+      }
+    } catch (err) {
+      console.error('❌ [submit-tunnel-assessment] GROQ tunnel report generation failed:', err.message);
+    }
+
+    // Generate PDF from report
+    let pdfBuf = null;
+    try {
+      console.log('🔄 [submit-tunnel-assessment] Generating tunnel PDF...');
+      console.log('  - Report text length:', reportText ? reportText.length : 0, 'characters');
+      console.log('  - Calling /api/generate-tunnel-report-pdf endpoint...');
+      
+      const pdfRes = await axios.post(`${baseUrl}/api/generate-tunnel-report-pdf`, {
+        user_details: userDetails,
+        assessment_responses: assessmentResponses,
+        reportText: reportText
+      }, { responseType: 'arraybuffer', timeout: 60000 });
+
+      console.log('📊 [submit-tunnel-assessment] PDF endpoint response:');
+      console.log('  - Status:', pdfRes.status);
+      console.log('  - Data type:', typeof pdfRes.data);
+      console.log('  - Data length:', pdfRes.data ? pdfRes.data.length : 0);
+
+      if (pdfRes && pdfRes.data) {
+        pdfBuf = Buffer.from(pdfRes.data);
+        console.log('✅ [submit-tunnel-assessment] PDF generated, size:', pdfBuf.length, 'bytes');
+      } else {
+        console.warn('⚠️ [submit-tunnel-assessment] PDF response empty');
+      }
+    } catch (err) {
+      console.error('❌ [submit-tunnel-assessment] PDF generation failed:');
+      console.error('  - Error message:', err.message);
+      if (err.response) {
+        console.error('  - HTTP Status:', err.response.status);
+        console.error('  - Response data:', err.response.data);
+      }
+    }
+
+    // Upload PDF to Cloudinary if available
+    let cloudinaryUrl = null;
+    let cloudinaryPublicId = null;
+    
+    console.log('🔍 [submit-tunnel-assessment] Cloudinary check:');
+    console.log('  - CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME ? 'Set' : 'NOT SET');
+    console.log('  - PDF Buffer:', pdfBuf ? `${pdfBuf.length} bytes` : 'NULL');
+    
+    if (process.env.CLOUDINARY_CLOUD_NAME && pdfBuf) {
+      try {
+        const publicId = `tunnel_report_${Date.now()}_${userDetails.name.replace(/\s+/g, '_')}`;
+        console.log('⬆️ [submit-tunnel-assessment] Uploading PDF to Cloudinary...');
+        console.log('  - Public ID:', publicId);
+        console.log('  - PDF size:', pdfBuf.length, 'bytes');
+        
+        const uploadResult = await cloudinaryService.uploadPdfBuffer(pdfBuf, publicId);
+        
+        console.log('📊 [submit-tunnel-assessment] Cloudinary upload result:', uploadResult ? 'Received' : 'NULL');
+        if (uploadResult) {
+          console.log('  - secure_url:', uploadResult.secure_url);
+          console.log('  - public_id:', uploadResult.public_id);
+        }
+        
+        if (uploadResult && uploadResult.secure_url) {
+          cloudinaryUrl = uploadResult.secure_url;
+          cloudinaryPublicId = uploadResult.public_id;
+          console.log('✅ [submit-tunnel-assessment] Uploaded to Cloudinary:', cloudinaryUrl);
+        } else {
+          console.warn('⚠️ [submit-tunnel-assessment] Upload succeeded but no secure_url in result');
+        }
+      } catch (uploadErr) {
+        console.error('❌ [submit-tunnel-assessment] Cloudinary upload failed:');
+        console.error('  - Error message:', uploadErr.message);
+        console.error('  - Error stack:', uploadErr.stack);
+      }
+    } else {
+      console.warn('⚠️ [submit-tunnel-assessment] Skipping Cloudinary upload:');
+      if (!process.env.CLOUDINARY_CLOUD_NAME) {
+        console.warn('  - Reason: CLOUDINARY_CLOUD_NAME not configured');
+      }
+      if (!pdfBuf) {
+        console.warn('  - Reason: PDF buffer is null (PDF generation failed)');
+      }
+    }
+
+    // Save to database
+    const rawResponses = assessmentResponses.raw_responses || assessmentResponses;
+    const assessmentDoc = {
+      userDetails: {
+        name: userDetails.name,
+        email: userDetails.email,
+        phoneCountryCode: userDetails.phoneCountryCode || '+91',
+        phone: userDetails.phone || '',
+        organization: userDetails.organization || '',
+        structureType: 'Tunnel',
+        yearOfConstruction: null,
+        location: rawResponses.q1_city || ''
+      },
+      assessmentResponses: assessmentResponses,
+      responses: rawResponses,
+      pdfData: pdfBuf ? {
+        filename: `Tunnel_Assessment_${userDetails.name.replace(/\s+/g, '_')}_${Date.now()}.pdf`,
+        contentType: 'application/pdf',
+        size: pdfBuf.length,
+        data: pdfBuf,
+        generatedAt: getISTTimestamp(),
+        cloudinaryPublicId,
+        cloudinaryUrl
+      } : undefined,
+      reportText: reportText,
+      assessmentType: 'Tunnel',
+      status: 'completed'
+    };
+
+    console.log('🔵 [submit-tunnel-assessment] Saving to MongoDB...');
+    const assessment = new Assessment(assessmentDoc);
+    const saved = await assessment.save();
+    console.log('✅ [submit-tunnel-assessment] Assessment saved:', saved._id);
+
+    // Send client email
+    try {
+      await sendAssessmentCompletionEmail(userDetails, 'Tunnel', pdfBuf);
+      console.log('✅ [submit-tunnel-assessment] Client email sent');
+      await Assessment.findByIdAndUpdate(saved._id, { emailSent: true, emailSentAt: getISTTimestamp() });
+    } catch (err) {
+      console.error('❌ [submit-tunnel-assessment] Failed to send client email:', err.message);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Tunnel assessment submitted successfully',
+      assessmentId: saved._id,
+      cloudinaryUrl: cloudinaryUrl
+    });
+
+  } catch (error) {
+    console.error('❌ [submit-tunnel-assessment] Error:', error.message);
+    res.status(500).json({ error: 'Failed to submit tunnel assessment', details: error.message });
+  }
+});
+
+// ========================================
+// BRIDGE ASSESSMENT ENDPOINTS
+// ========================================
+
+// Generate bridge health report using GROQ API
+app.post('/api/generate-bridge-report', reportLimiter, async (req, res) => {
+  try {
+    console.log('Incoming /api/generate-bridge-report body keys:', Object.keys(req.body || {}));
+    const user_details = req.body.user_details || req.body.userDetails || {};
+    const assessment_responses = req.body.assessment_responses || req.body.assessmentResponses;
+
+    if (!assessment_responses) {
+      return res.status(400).json({ error: 'Missing assessment responses' });
+    }
+
+    // Unwrap the raw responses if they are wrapped
+    const actualResponses = assessment_responses.raw_responses || assessment_responses;
+
+    let report;
+    let usedMock = false;
+    let groqDebug = null;
+
+    // Use GROQ API if key is available
+    if (GROQ_API_KEY) {
+      console.log('Using GROQ API for bridge report generation...');
+      console.log('📊 Bridge Data Sample:');
+      console.log('  - Age Range:', actualResponses.q1_ageRange);
+      console.log('  - Location:', actualResponses.q1_city, actualResponses.q1_state);
+      console.log('  - Structural System:', actualResponses.q1_structural_system);
+      console.log('  - Bridge Type:', actualResponses.q1_bridge_type);
+      console.log('  - Usage:', actualResponses.q1_usage);
+      
+      // Build comprehensive bridge data string
+      const formatValue = (val) => {
+        if (val === null || val === undefined || val === '') return 'Not specified';
+        if (Array.isArray(val)) return val.length > 0 ? val.join(', ') : 'Not specified';
+        return String(val);
+      };
+
+      // Get all bridge response keys
+      const allKeys = Object.keys(actualResponses).sort();
+      console.log('📊 Total bridge response keys:', allKeys.length);
+
+      // Extract all bridge data comprehensively
+      const bridgeSummary = `
+BRIDGE BASIC INFORMATION:
+- Age: ${formatValue(actualResponses.q1_ageRange)}
+- Location: ${formatValue(actualResponses.q1_city)}, ${formatValue(actualResponses.q1_state)}, ${formatValue(actualResponses.q1_country)}
+- Structural System: ${formatValue(actualResponses.q1_structural_system)}
+- Bridge Type: ${formatValue(actualResponses.q1_bridge_type)}
+- Primary Usage/Function: ${formatValue(actualResponses.q1_usage)}
+- Exposure Condition: ${formatValue(actualResponses.q3_exposure_type)}
+
+LOADING CONDITION:
+- Major Alterations: ${actualResponses.q2_alterations_has === 'Yes' ? 'YES - ' + formatValue(actualResponses.q2_alterations_types) : 'No major alterations'}
+
+DECK CONDITION:
+- Deck Defects: ${actualResponses.q4_deck_defects_has === 'Yes' ? 'YES - ' + formatValue(actualResponses.q4_deck_defects_types) : 'No deck defects'}
+
+BEARING CONDITION:
+- Bearing Issues: ${actualResponses.q5_bearing_issues_has === 'Yes' ? 'YES - ' + formatValue(actualResponses.q5_bearing_issues_types) + ' at ' + formatValue(actualResponses.q5_bearing_location) : 'No bearing issues'}
+- Components - Restricted Movement: ${formatValue(actualResponses.q5_bearing_components_restricted_no_movement)}
+- Components - Cracked: ${formatValue(actualResponses.q5_bearing_components_cracked)}
+- Components - Corroded: ${formatValue(actualResponses.q5_bearing_components_corrosion)}
+- Components - Misaligned: ${formatValue(actualResponses.q5_bearing_components_misalignment)}
+- Components - Displaced: ${formatValue(actualResponses.q5_bearing_components_displacement)}
+
+EXPANSION JOINTS:
+- Joint Issues: ${actualResponses.q6_expansion_issues_has === 'Yes' ? 'YES - ' + formatValue(actualResponses.q6_expansion_issues_types) : 'No expansion joint issues'}
+
+COMPOSITE STRUCTURE ASSESSMENT (Q6-Q15):
+- Connections/Anchorage Issues: ${actualResponses.q6_composite_connections_has === 'Yes' ? 'YES - ' + formatValue(actualResponses.q6_composite_connections_types) : 'No connection issues'}
+  → Gaps: ${formatValue(actualResponses.q6_composite_gaps_conditions)} at ${formatValue(actualResponses.q6_composite_gaps_locations)}
+  → Bent Plates: ${formatValue(actualResponses.q6_composite_bent_plates_locations)}
+  → Anchor Bolts: ${formatValue(actualResponses.q6_composite_anchor_locations)}
+
+- Cracks in Elements: ${actualResponses.q7_composite_cracks_has === 'Yes' ? 'YES - Affected: ' + formatValue(actualResponses.q7_composite_cracks_elements) : 'No cracks observed'}
+  → Deck Slab: ${formatValue(actualResponses.q7_composite_loc_deck_slab)} (${formatValue(actualResponses.q7_composite_deck_slab_orientations)})
+  → Girders: ${formatValue(actualResponses.q7_composite_loc_steel_composite_girder)} (${formatValue(actualResponses.q7_composite_girder_orientations)})
+  → Shear Connectors: ${formatValue(actualResponses.q7_composite_loc_shear_connectors)}
+  → Diaphragms: ${formatValue(actualResponses.q7_composite_loc_diaphragms)}
+  → Piers: ${formatValue(actualResponses.q7_composite_loc_pier)} (${formatValue(actualResponses.q7_composite_pier_orientations)})
+  → Pier Caps: ${formatValue(actualResponses.q7_composite_loc_pier_cap)}
+  → Abutments: ${formatValue(actualResponses.q7_composite_loc_abutment)}
+
+- Deformation: ${actualResponses.q8_composite_deformation_has === 'Yes' ? 'YES - Types: ' + formatValue(actualResponses.q8_composite_deformation_types) : 'No deformation'}
+  → Excessive Deflection in: ${formatValue(actualResponses.q8_composite_excessive_deflection_elements)}
+  → Local Distortion in: ${formatValue(actualResponses.q8_composite_local_distortion_elements)}
+  → Differential Movement in: ${formatValue(actualResponses.q8_composite_differential_elements)}
+  → Gaps at Interfaces in: ${formatValue(actualResponses.q8_composite_gaps_interfaces)}
+  → Global Tilt in: ${formatValue(actualResponses.q8_composite_global_tilt_elements)}
+
+- Spalling: ${actualResponses.q9_composite_spalling_has === 'Yes' ? 'YES in ' + formatValue(actualResponses.q9_composite_spalling_elements) : 'No spalling'}
+
+- Moisture Distress: ${actualResponses.q10_composite_moisture_has === 'Yes' ? 'YES' : 'No moisture issues'}
+  → Damp Patches: ${actualResponses.q10a_composite_damp_has === 'Yes' ? formatValue(actualResponses.q10a_composite_damp_elements) : 'None'}
+  → Efflorescence: ${actualResponses.q10b_composite_white_has === 'Yes' ? formatValue(actualResponses.q10b_composite_white_elements) : 'None'}
+  → Algae/Moss: ${actualResponses.q10c_composite_green_has === 'Yes' ? formatValue(actualResponses.q10c_composite_green_elements) : 'None'}
+
+- Corrosion in Steel: ${actualResponses.q11_composite_corrosion_has === 'Yes' ? 'YES in ' + formatValue(actualResponses.q11_composite_corrosion_elements) : 'No corrosion'}
+  → Girders: ${formatValue(actualResponses.q11_composite_girder_locations)} (${formatValue(actualResponses.q11_composite_girder_characteristics)})
+  → Shear Connectors: ${formatValue(actualResponses.q11_composite_shear_locations)} (${formatValue(actualResponses.q11_composite_shear_characteristics)})
+  → Diaphragms: ${formatValue(actualResponses.q11_composite_diaphragm_locations)} (${formatValue(actualResponses.q11_composite_diaphragm_characteristics)})
+  → Reinforcement: ${formatValue(actualResponses.q11_composite_reinforcement_locations)} (${formatValue(actualResponses.q11_composite_reinforcement_characteristics)})
+  → Plates: ${formatValue(actualResponses.q11_composite_plates_locations)} (${formatValue(actualResponses.q11_composite_plates_characteristics)})
+
+- Vibration During Traffic: ${actualResponses.q12a_composite_vibration_has === 'Yes' ? 'YES - Modes: ' + formatValue(actualResponses.q12a_composite_vibration_sources) + ' at ' + formatValue(actualResponses.q12a_composite_vibration_locations) : 'No vibration'}
+  → Damping Devices: ${actualResponses.q12b_composite_recurring_has === 'Yes' ? 'Issues - ' + formatValue(actualResponses.q12b_composite_recurring_observations) : 'Functioning properly'}
+
+- Foundation/Hydraulics: ${actualResponses.q13_composite_ground_issues_has === 'Yes' ? 'YES - ' + formatValue(actualResponses.q13_composite_ground_issues) : 'No issues'}
+  → Scour around Piers: ${formatValue(actualResponses.q13_composite_scour_piers)}
+  → Scour around Abutments: ${formatValue(actualResponses.q13_composite_scour_abutments)}
+  → Erosion: ${formatValue(actualResponses.q13_composite_erosion)}
+  → Debris: ${formatValue(actualResponses.q13_composite_debris)}
+
+- Natural Disasters: ${actualResponses.q14_composite_disaster_has === 'Yes' ? 'YES - ' + formatValue(actualResponses.q14_composite_disaster_types) + (actualResponses.q14_composite_earthquake_intensity ? ', Intensity: ' + formatValue(actualResponses.q14_composite_earthquake_intensity) : '') : 'No disaster history'}
+
+- Remedial Measures: ${actualResponses.q15_composite_expert_intervention_has === 'Yes' ? 'YES - ' + formatValue(actualResponses.q15_composite_expert_intervention_types) : 'No previous expert intervention'}
+`;
+
+      const prompt = `You are an expert BRIDGE ENGINEER specializing in bridge health assessment, structural integrity evaluation, and bridge maintenance. 
+
+███████████████████████████████████████████████████████████████████████
+█ THIS IS A BRIDGE ASSESSMENT - NOT A BUILDING ASSESSMENT █
+███████████████████████████████████████████████████████████████████████
+
+STRUCTURE TYPE: ${actualResponses.q1_bridge_type || 'COMPOSITE BRIDGE'} (${actualResponses.q1_structural_system || 'COMPOSITE'})
+USER: ${user_details.name || 'Not provided'} (${user_details.email || 'Not provided'})
+
+❌ PROHIBITED TERMS - NEVER USE:
+- "building", "RCC building", "structure building"
+- "beams", "columns", "floors", "walls", "storeys"
+- Building codes (IS 456 for buildings)
+- Building-specific terms
+
+✅ REQUIRED TERMS - ALWAYS USE:
+- "BRIDGE" or "${actualResponses.q1_bridge_type || 'composite bridge'}"
+- "deck slab", "composite deck", "bridge deck"
+- "main girders", "steel girders", "composite girders"
+- "piers", "pier caps", "abutments", "wing walls"
+- "bearings", "bearing pads", "expansion joints"
+- "shear connectors", "diaphragms"
+- "scour", "hydraulic conditions", "riverbed"
+- IRC/AASHTO codes for BRIDGES
+
+BRIDGE ASSESSMENT DATA:
+${bridgeSummary}
+
+Generate a comprehensive technical BRIDGE ASSESSMENT REPORT with these 6 sections:
+
+1. OVERVIEW
+Start: "The BRIDGE in question is a ${actualResponses.q1_ageRange || 'age unknown'} old structure located in ${actualResponses.q1_city || 'location'}, ${actualResponses.q1_state || 'state'}."
+NEVER say "building" - ALWAYS say "BRIDGE"
+- Overall bridge health rating
+- Urgency level
+- Key bridge component findings (deck, girders, bearings, piers)
+- Bridge-specific concerns (scour, bearings, expansion joints)
+
+2. KEY OBSERVATIONS
+Organize by BRIDGE COMPONENTS:
+• Deck Slab Condition (cracks, delamination)
+• Main Girders (deflection, corrosion, shear connectors)
+• Bearings & Expansion Joints (seizure, leakage)
+• Piers & Abutments (cracks, settlement)
+• Hydraulic & Foundation (scour, erosion)
+• Traffic-Induced Effects (vibration)
+
+3. RISK SUMMARY
+Bridge-specific risks:
+- Deck failure (cracking, overload)
+- Girder buckling/fatigue
+- Bearing seizure
+- Pier settlement/scour
+- Expansion joint failure
+
+4. TECHNICAL ASSESSMENT
+Bridge engineering analysis:
+• Load-carrying capacity (IRC 6/IRC 112)
+• Live load rating (IRC Class AA/A)
+• Seismic assessment (IS 1893 for bridges)
+• Hydraulic & scour (IRC 78)
+• Fatigue & dynamics (traffic cycles)
+• Durability (deck carbonation, steel corrosion)
+
+5. RECOMMENDATIONS
+• Immediate: Load posting, NDT (deck GPR, girder ultrasonic)
+• Short-term: Deck repair, bearing replacement, scour protection
+• Long-term: Bridge inspections (IRC SP-35), protective coatings
+
+6. CONCLUSION
+- Overall BRIDGE condition
+- Load rating and service life
+- IRC/AASHTO compliance
+- Inspection frequency
+
+Write 4000-5000 words with detailed technical BRIDGE content. Add blank lines between sections.`;
+
+      try {
+        const chatCompletion = await groq.chat.completions.create({
+          messages: [{ role: 'user', content: prompt }],
+          model: GROQ_MODEL,
+          temperature: 0.7,
+          max_tokens: 8000
+        });
+
+        report = chatCompletion.choices[0]?.message?.content || '';
+        console.log('✅ GROQ API response received, length:', report.length, 'characters');
+        groqDebug = {
+          model: GROQ_MODEL,
+          temperature: 0.7,
+          max_tokens: 8000,
+          prompt_length: prompt.length,
+          response_length: report.length
+        };
+
+      } catch (error) {
+        console.error('GROQ API error:', error.message);
+        report = `PRELIMINARY BRIDGE ASSESSMENT REPORT
+
+Name: ${user_details.name || 'Not provided'}
+Email: ${user_details.email || 'Not provided'}
+
+1. OVERVIEW
+The BRIDGE in question is a ${formatValue(actualResponses.q1_ageRange)} old ${formatValue(actualResponses.q1_bridge_type)} structure located in ${formatValue(actualResponses.q1_city)}, ${formatValue(actualResponses.q1_state)}.
+
+Overall Health Rating: Professional detailed assessment required
+Urgency: Detailed inspection recommended
+
+2. KEY OBSERVATIONS
+• Structural System: ${formatValue(actualResponses.q1_structural_system)}
+• Deck Condition: ${actualResponses.q4_deck_defects_has === 'Yes' ? 'Defects observed - ' + formatValue(actualResponses.q4_deck_defects_types) : 'No defects reported'}
+• Bearing Status: ${actualResponses.q5_bearing_issues_has === 'Yes' ? 'Issues present - ' + formatValue(actualResponses.q5_bearing_issues_types) : 'Functioning normally'}
+• Expansion Joints: ${actualResponses.q6_expansion_issues_has === 'Yes' ? 'Issues present' : 'Functioning normally'}
+
+3. RISK SUMMARY
+Detailed professional bridge inspection required to assess actual risks and structural condition.
+
+4. TECHNICAL ASSESSMENT
+Comprehensive bridge engineering assessment required with NDT methods.
+
+5. RECOMMENDATIONS
+• Immediate: Commission detailed bridge inspection with NDT
+• Short-term: Execute repairs based on findings
+• Long-term: Establish monitoring and maintenance program
+
+6. CONCLUSION
+Professional bridge assessment required per IRC SP-35. This preliminary report provides initial guidance only.
+
+Disclaimer: Based on questionnaire responses. Actual bridge condition must be determined through on-site investigation by qualified bridge engineer.`;
+        usedMock = true;
+      }
+    } else {
+      // Fallback mock report
+      report = `PRELIMINARY BRIDGE ASSESSMENT REPORT
+
+Name: ${user_details.name || 'Not provided'}
+Email: ${user_details.email || 'Not provided'}
+
+[Professional bridge assessment required - GROQ API not configured]`;
+      usedMock = true;
+    }
+
+    res.status(200).json({
+      success: true,
+      report: report,
+      usedMock: usedMock,
+      groqDebug: groqDebug
+    });
+
+  } catch (error) {
+    console.error('Error generating bridge report:', error.message);
+    res.status(500).json({ error: 'Failed to generate bridge report', details: error.message });
+  }
+});
+
+// ========================================
+// GENERAL ASSESSMENT ENDPOINTS
+// ========================================
+
 // Save assessment to MongoDB
 app.post('/api/save-assessment', async (req, res) => {
   try {
@@ -1789,10 +2615,20 @@ app.post('/api/submit-assessment', async (req, res) => {
 
     // 1) ALWAYS generate comprehensive report on server (not using frontend report)
     console.log('⏳ [submit-assessment] Generating comprehensive 60KB+ AI report on server...');
+    console.log('📋 [submit-assessment] Assessment Type:', assessmentType);
     let reportText = '';
     
+    // Determine which report generator endpoint to call based on assessmentType
+    let reportEndpoint = `${baseUrl}/api/generate-building-report`;
+    if (assessmentType === 'Tunnel') {
+      reportEndpoint = `${baseUrl}/api/generate-tunnel-report`;
+    } else if (assessmentType === 'Bridge') {
+      reportEndpoint = `${baseUrl}/api/generate-bridge-report`;
+    }
+    console.log('🔗 [submit-assessment] Using report endpoint:', reportEndpoint);
+    
     try {
-      const genRes = await axios.post(`${baseUrl}/api/generate-building-report`, {
+      const genRes = await axios.post(reportEndpoint, {
         user_details: userDetails,
         assessment_responses: assessmentResponses
       }, { timeout: 120000 });
@@ -1802,7 +2638,7 @@ app.post('/api/submit-assessment', async (req, res) => {
         console.log('✅ [submit-assessment] Server generated report length:', reportText.length, 'characters');
         console.log('✅ [submit-assessment] This ensures Cloudinary gets the full 60KB+ report');
       } else {
-        console.warn('⚠️ [submit-assessment] generate-building-report returned no report');
+        console.warn('⚠️ [submit-assessment] Report generation returned no report');
       }
     } catch (err) {
       console.error('❌ [submit-assessment] GROQ report generation failed:', err.message);
@@ -1843,6 +2679,12 @@ app.post('/api/submit-assessment', async (req, res) => {
     const originalResponses = assessmentResponses || {};
     const rawResponses = originalResponses.raw_responses || originalResponses;
     const formattedResponses = originalResponses.formatted_responses || originalResponses.formatted || null;
+    
+    console.log('📊 BACKEND RECEIVED - Response Analysis:');
+    console.log('  originalResponses keys:', Object.keys(originalResponses));
+    console.log('  rawResponses total keys:', Object.keys(rawResponses).length);
+    console.log('  rawResponses Q1-Q14 keys:', Object.keys(rawResponses).filter(k => /^q(1[0-4]|[1-9])_/.test(k)).length);
+    console.log('  Sample keys:', Object.keys(rawResponses).slice(0, 20));
 
     const pdfData = pdfBuf ? {
       filename: `OSHAM_Assessment_${userDetails.name.replace(/\s+/g, '_')}_${Date.now()}.pdf`,
@@ -2033,13 +2875,16 @@ app.post('/api/contact-form', async (req, res) => {
   }
 });
 
-// Mount auth routes
+// Mount auth routes with stricter rate limiting
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 app.use('/api/auth', authRoutes);
 
 // Mount admin routes
 app.use('/api/admin', adminRoutes);
 
-// Mount payment routes
+// Mount payment routes with payment-specific rate limiting
+app.use('/api/payment/create-order', paymentLimiter);
 app.use('/api/payment', paymentRoutes);
 
 // User Reports - Get all assessments for logged-in user

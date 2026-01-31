@@ -22,7 +22,8 @@ function uploadPdfBuffer(buffer, publicId, folder) {
       public_id: safePublicId,
       overwrite: true,
       folder: targetFolder,
-      format: 'pdf'
+      format: 'pdf',
+      access_mode: 'public' // Make PDFs publicly accessible
     };
 
     const uploadStream = cloudinary.uploader.upload_stream(options, (error, result) => {

@@ -9,7 +9,7 @@ const router = express.Router();
 
 // Currency pricing map (in smallest units)
 const CURRENCY_PRICING = {
-  INR: 100,  // ₹1 (in paise)
+  INR: 2500,  // ₹25 (in paise)
   USD: 500     // $5 (in cents)
 };
 
@@ -104,7 +104,7 @@ function getCurrencyForUser(user, req) {
       const currency = (detectedCountry === 'India') ? 'INR' : 'USD';
       console.log('  ✅ FINAL DECISION: Currency from IP:', currency);
       console.log('  📍 Country:', detectedCountry);
-      console.log('  💵 Amount:', currency === 'INR' ? '₹250 (25000 paise)' : '$5 (500 cents)');
+      console.log('  💵 Amount:', currency === 'INR' ? '₹25 (2500 paise)' : '$5 (500 cents)');
       return currency;
     }
   }
@@ -173,8 +173,8 @@ router.post('/create-order', authenticateToken, async (req, res) => {
     console.log('\n📦 ORDER SUMMARY:');
     console.log('  User:', user.email);
     console.log('  Currency:', currency);
-    console.log('  Amount:', amount, currency === 'INR' ? '(₹1)' : '($5)');
-    console.log('  Display:', currency === 'INR' ? '₹1' : '$5');
+    console.log('  Amount:', amount, currency === 'INR' ? '(₹25)' : '($5)');
+    console.log('  Display:', currency === 'INR' ? '₹25' : '$5');
     console.log('=' .repeat(60) + '\n');
     
     const options = {
@@ -210,7 +210,7 @@ router.post('/create-order', authenticateToken, async (req, res) => {
       orderId: order.id,
       amount: amount,
       currency: currency,
-      displayAmount: currency === 'INR' ? '₹1' : '$5',
+      displayAmount: currency === 'INR' ? '₹25' : '$5',
       keyId: process.env.RAZORPAY_KEY_ID
     });
     
@@ -321,7 +321,7 @@ router.get('/currency-info', authenticateToken, async (req, res) => {
       success: true,
       currency: currency,
       amount: amount,
-      displayAmount: currency === 'INR' ? '₹1' : '$5'
+      displayAmount: currency === 'INR' ? '₹25' : '$5'
     });
     
   } catch (error) {

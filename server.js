@@ -2954,7 +2954,11 @@ app.get('/api/user/assessments', authenticateToken, async (req, res) => {
         hasAdminReport: !!assessment.adminReport?.gridFsFileId,
         adminReportUrl: assessment.adminReport?.gridFsFileId ? `/api/proxy/pdf/${assessment._id}` : null,
         aiReportUrl: assessment.pdfData?.cloudinaryUrl,
-        hasAdvancedResponses: !!(assessment.advancedAssessmentId || (assessment.advancedResponses && Object.keys(assessment.advancedResponses).length > 0)),
+        hasAdvancedResponses: !!(
+          assessment.advancedAssessmentId ||
+          assessment.advancedSubmittedAt ||
+          (assessment.advancedResponses && Object.keys(assessment.advancedResponses).length > 0)
+        ),
         advancedAssessmentId: assessment.advancedAssessmentId || null,
         advancedSubmittedAt: assessment.advancedSubmittedAt || null,
         hasFinalAssessment: !!finalMap[String(assessment._id)],
@@ -3340,19 +3344,67 @@ app.get('/api/proxy/pdf/:assessmentId', authenticateToken, async (req, res) => {
   }
 });
 
-// Health check endpoint
+// Uptime monitor endpoints
+// - /api/health: compatibility endpoint (always 200, includes database state)
+// - /api/live: process is alive
+// - /api/ready: service is ready (returns 503 when DB is disconnected)
+const logUptimeHit = (req, endpoint) => {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  const ip = (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor || req.ip || '').toString().split(',')[0].trim();
+  console.log(`[UPTIME] ${new Date().toISOString()} ${endpoint} hit from ${ip || 'unknown-ip'}`);
+};
+
 app.get('/api/health', (req, res) => {
-  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-  res.json({ 
-    status: 'ok', 
+  logUptimeHit(req, '/api/health');
+  const dbConnected = mongoose.connection.readyState === 1;
+  const dbStatus = dbConnected ? 'connected' : 'disconnected';
+  const memory = process.memoryUsage();
+
+  res.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
     database: dbStatus,
-    mongodb: MONGODB_URI ? 'configured' : 'not configured'
+    mongodb: MONGODB_URI ? 'configured' : 'not configured',
+    environment: process.env.NODE_ENV || 'development',
+    memoryMb: {
+      rss: Math.round(memory.rss / 1024 / 1024),
+      heapUsed: Math.round(memory.heapUsed / 1024 / 1024),
+      heapTotal: Math.round(memory.heapTotal / 1024 / 1024)
+    }
   });
+});
+
+app.get('/api/live', (req, res) => {
+  logUptimeHit(req, '/api/live');
+  res.status(200).json({
+    status: 'alive',
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime())
+  });
+});
+
+app.get('/api/ready', (req, res) => {
+  logUptimeHit(req, '/api/ready');
+  const dbConnected = mongoose.connection.readyState === 1;
+  const payload = {
+    status: dbConnected ? 'ready' : 'not_ready',
+    timestamp: new Date().toISOString(),
+    checks: {
+      database: dbConnected ? 'pass' : 'fail'
+    }
+  };
+
+  if (!dbConnected) {
+    return res.status(503).json(payload);
+  }
+
+  return res.status(200).json(payload);
 });
 
 // Keep-alive endpoint for external uptime monitors
 app.get('/ping', (req, res) => {
+  logUptimeHit(req, '/ping');
   res.status(200).send('Server is alive');
 });
 

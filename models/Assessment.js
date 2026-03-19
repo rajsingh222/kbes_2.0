@@ -27,6 +27,27 @@ const assessmentSchema = new mongoose.Schema({
     required: false
   },
   
+  // Advanced Questionnaire Responses
+  // Stores the complete flat key-value map of all advanced form fields.
+  // Use assessment.markModified('advancedResponses') before save when mutating.
+  advancedResponses: {
+    type: mongoose.Schema.Types.Mixed,
+    required: false
+  },
+
+  // Reference to the separate AdvancedAssessment document (own collection)
+  advancedAssessmentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'AdvancedAssessment',
+    default: null
+  },
+
+  // Timestamp of when the advanced questionnaire was last submitted
+  advancedSubmittedAt: {
+    type: Date,
+    default: null
+  },
+  
   // PDF Data
   pdfData: {
     filename: String,
@@ -61,7 +82,7 @@ const assessmentSchema = new mongoose.Schema({
   // Metadata
   assessmentType: {
     type: String,
-    enum: ['Bridge', 'Building', 'Tower', 'Tunnel', 'Other'],
+    enum: ['Bridge', 'Building', 'Load Bearing', 'Tower', 'Tunnel', 'Other'],
     required: true
   },
   

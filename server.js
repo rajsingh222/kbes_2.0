@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const multer = require('multer');
 const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs');
@@ -73,6 +74,8 @@ mongoose.connect(MONGODB_URI, mongooseOptions)
 
 // Import models and services
 const Assessment = require('./models/Assessment');
+const AdvancedAssessment = require('./models/AdvancedAssessment');
+const FinalAssessment = require('./models/FinalAssessment');
 const Payment = require('./models/Payment');
 const { sendAssessmentCompletionEmail, sendAdminNotificationEmail } = require('./services/emailService');
 const cloudinaryService = require('./services/cloudinaryService');
@@ -1599,7 +1602,7 @@ EXPERT INTERVENTION:
         tunnelSummary + '\n\n' +
         'Create a detailed technical report with these exact sections:\n\n' +
         '1. OVERVIEW\n' +
-        'Summarize the tunnel (age ' + (actualResponses.q1_ageRange || 'unknown') + ', length ' + (actualResponses.q1_tunnel_length || 'unspecified') + 'km, location from ' + (actualResponses.q1_city || '') + ', ' + (actualResponses.q1_state || '') + ' to ' + (actualResponses.q1_end_city || '') + ', ' + (actualResponses.q1_end_state || '') + ', construction method ' + (actualResponses.q2a_construction_method || 'unspecified') + ', lining system ' + (actualResponses.q2c_lining_system || 'unspecified') + ', primary usage ' + (actualResponses.q3_usage || 'unspecified') + '), key findings, and overall health rating.\n\n' +
+        'Summarize the tunnel (age ' + (actualResponses.q1_ageRange || 'unknown') + ', length ' + (actualResponses.q1_tunnel_length || 'unspecified') + 'km, location from ' + (actualResponses.q1_city || '') + ', ' + (actualResponses.q1_state || '') + ' to ' + (actualResponses.q1_end_city || '') + ', ' + (actualResponses.q1_end_state || '') + ', construction method ' + (actualResponses.q2a_construction_method || 'unspecified') + ', lining system ' + (actualResponses.q2c_lining_system || 'unspecified') + ', primary usage ' + (actualResponses.q3_usage || 'unspecified') + '), key findings and overall health rating.\n\n' +
         '2. KEY OBSERVATIONS\n' +
         'Detail ALL observed issues based on the data above:\n' +
         '- Structural distress (cracks, deformation, joint issues, bolt condition)\n' +
@@ -1612,7 +1615,7 @@ EXPERT INTERVENTION:
         '- Fire damage (if any)\n' +
         '- Ventilation and drainage issues\n' +
         '- Impact of natural disasters (if any)\n' +
-        'Be specific about locations, orientations, and severity levels from the data.\n\n' +
+        'Be specific about locations, orientations and severity levels from the data.\n\n' +
         '3. RISK SUMMARY\n' +
         'Categorize ALL findings into:\n' +
         '- CRITICAL/HIGH RISK: Immediate safety issues requiring action within 0-1 month\n' +
@@ -1635,7 +1638,7 @@ EXPERT INTERVENTION:
         '- LONG-TERM (1-5 years): Monitoring systems, preventive maintenance, upgrade plans\n' +
         'Be specific to THIS tunnel\'s observed conditions.\n\n' +
         '6. CONCLUSION\n' +
-        'Final assessment, critical actions needed, service life prognosis, and need for detailed investigation. Reference the ' + (actualResponses.q1_tunnel_length || 'specified') + 'km tunnel\'s specific issues.\n\n' +
+        'Final assessment, critical actions needed, service life prognosis and need for detailed investigation. Reference the ' + (actualResponses.q1_tunnel_length || 'specified') + 'km tunnel\'s specific issues.\n\n' +
         'Write detailed, technical content (4000-5000 words total). Use ONLY the data provided above. Be specific to this ' + (actualResponses.q1_ageRange || 'existing') + ' year old ' + (actualResponses.q2c_lining_system || 'tunnel') + ' tunnel.';
 
       try {
@@ -1774,7 +1777,7 @@ The following conditions have been identified during the preliminary assessment:
 Based on preliminary data, recommend immediate detailed investigation to establish actual tunnel condition, safety margins and repair requirements.
 
 4. TECHNICAL ASSESSMENT
-Comprehensive tunnel inspection with Ground Penetrating Radar, ultrasonic testing, and structural analysis required to determine load-carrying capacity and safety factors.
+Comprehensive tunnel inspection with Ground Penetrating Radar, ultrasonic testing and structural analysis required to determine load-carrying capacity and safety factors.
 
 5. RECOMMENDATIONS
 • Immediate: Commission detailed tunnel investigation with NDT methods
@@ -2137,7 +2140,7 @@ COMPOSITE STRUCTURE ASSESSMENT (Q6-Q15):
 - Remedial Measures: ${actualResponses.q15_composite_expert_intervention_has === 'Yes' ? 'YES - ' + formatValue(actualResponses.q15_composite_expert_intervention_types) : 'No previous expert intervention'}
 `;
 
-      const prompt = `You are an expert BRIDGE ENGINEER specializing in bridge health assessment, structural integrity evaluation, and bridge maintenance. 
+      const prompt = `You are an expert BRIDGE ENGINEER specializing in bridge health assessment, structural integrity evaluation and bridge maintenance. 
 
 ███████████████████████████████████████████████████████████████████████
 █ THIS IS A BRIDGE ASSESSMENT - NOT A BUILDING ASSESSMENT █
@@ -2357,7 +2360,12 @@ app.post('/api/save-assessment', async (req, res) => {
         q1: userDetails.q1 || '',
         q1Other: userDetails.q1Other || '',
         yearOfConstruction: userDetails.yearOfConstruction || null,
-        location: userDetails.location || ''
+        location: userDetails.location ||
+                  rawResponses.q1_city || rawResponses.q1_city_other ||
+                  rawResponses.q1_steel_city || rawResponses.q1_steel_city_other ||
+                  rawResponses.q1_heritage_city || rawResponses.q1_heritage_city_other ||
+                  rawResponses.q1_lb_city || rawResponses.q1_lb_city_other ||
+                  ''
       },
       assessmentResponses: assessmentResponses || {},
       // Store flattened copy of raw responses at top level for easy Compass access
@@ -2611,70 +2619,7 @@ app.post('/api/submit-assessment', async (req, res) => {
       return res.status(400).json({ error: 'Missing required user details (name, email)' });
     }
 
-    const baseUrl = `http://localhost:${process.env.PORT || 5000}`;
-
-    // 1) ALWAYS generate comprehensive report on server (not using frontend report)
-    console.log('⏳ [submit-assessment] Generating comprehensive 60KB+ AI report on server...');
-    console.log('📋 [submit-assessment] Assessment Type:', assessmentType);
-    let reportText = '';
-    
-    // Determine which report generator endpoint to call based on assessmentType
-    let reportEndpoint = `${baseUrl}/api/generate-building-report`;
-    if (assessmentType === 'Tunnel') {
-      reportEndpoint = `${baseUrl}/api/generate-tunnel-report`;
-    } else if (assessmentType === 'Bridge') {
-      reportEndpoint = `${baseUrl}/api/generate-bridge-report`;
-    }
-    console.log('🔗 [submit-assessment] Using report endpoint:', reportEndpoint);
-    
-    try {
-      const genRes = await axios.post(reportEndpoint, {
-        user_details: userDetails,
-        assessment_responses: assessmentResponses
-      }, { timeout: 120000 });
-
-      if (genRes && genRes.data && genRes.data.report) {
-        reportText = genRes.data.report;
-        console.log('✅ [submit-assessment] Server generated report length:', reportText.length, 'characters');
-        console.log('✅ [submit-assessment] This ensures Cloudinary gets the full 60KB+ report');
-      } else {
-        console.warn('⚠️ [submit-assessment] Report generation returned no report');
-      }
-    } catch (err) {
-      console.error('❌ [submit-assessment] GROQ report generation failed:', err.message);
-      throw new Error('Failed to generate AI report on server: ' + err.message);
-    }
-
-    // 2) Generate comprehensive PDF from reportText
-    console.log('🔄 [submit-assessment] Generating PDF from reportText...');
-    let pdfBuf = null;
-    try {
-      pdfBuf = await generatePdfBufferFromReport(reportText || '', userDetails);
-      console.log('✅ [submit-assessment] PDF generated, size:', pdfBuf.length);
-    } catch (err) {
-      console.error('❌ [submit-assessment] PDF generation failed:', err.message);
-    }
-
-    // 3) Upload PDF to Cloudinary if available
-    let cloudinaryUrl = null;
-    let cloudinaryPublicId = null;
-    if (process.env.CLOUDINARY_CLOUD_NAME && pdfBuf) {
-      try {
-        const cloudinaryService = require('./services/cloudinaryService');
-        const publicId = `report_${Date.now()}_${(userDetails.name || 'anon').replace(/\s+/g, '_')}`;
-        console.log('⬆️ [submit-assessment] Uploading PDF to Cloudinary with publicId:', publicId);
-        const uploadResult = await cloudinaryService.uploadPdfBuffer(pdfBuf, publicId);
-        if (uploadResult && uploadResult.secure_url) {
-          cloudinaryUrl = uploadResult.secure_url;
-          cloudinaryPublicId = uploadResult.public_id;
-          console.log('✅ [submit-assessment] Uploaded PDF to Cloudinary:', cloudinaryUrl);
-        }
-      } catch (err) {
-        console.error('❌ [submit-assessment] Cloudinary upload failed:', err.message || err);
-      }
-    }
-
-    // 4) Normalize and persist assessment to DB with server-generated report and PDF
+    // Normalize and persist assessment to DB first, then process heavy tasks in background.
     // Ensure all raw responses are preserved and formatted responses are stored separately
     const originalResponses = assessmentResponses || {};
     const rawResponses = originalResponses.raw_responses || originalResponses;
@@ -2686,16 +2631,6 @@ app.post('/api/submit-assessment', async (req, res) => {
     console.log('  rawResponses Q1-Q14 keys:', Object.keys(rawResponses).filter(k => /^q(1[0-4]|[1-9])_/.test(k)).length);
     console.log('  Sample keys:', Object.keys(rawResponses).slice(0, 20));
 
-    const pdfData = pdfBuf ? {
-      filename: `OSHAM_Assessment_${userDetails.name.replace(/\s+/g, '_')}_${Date.now()}.pdf`,
-      contentType: 'application/pdf',
-      size: pdfBuf.length,
-      data: pdfBuf,
-      cloudinaryPublicId: cloudinaryPublicId || '',
-      cloudinaryUrl: cloudinaryUrl || '',
-      generatedAt: getISTTimestamp()
-    } : null;
-
     const assessmentDoc = new Assessment({
       userDetails: {
         name: userDetails.name,
@@ -2706,7 +2641,12 @@ app.post('/api/submit-assessment', async (req, res) => {
         q1: userDetails.q1 || '',  // Nature of expertise
         q1Other: userDetails.q1Other || '',  // Custom expertise (when "Others" selected)
         yearOfConstruction: userDetails.yearOfConstruction || null,
-        location: userDetails.location || ''
+        location: userDetails.location ||
+                  rawResponses.q1_city || rawResponses.q1_city_other ||
+                  rawResponses.q1_steel_city || rawResponses.q1_steel_city_other ||
+                  rawResponses.q1_heritage_city || rawResponses.q1_heritage_city_other ||
+                  rawResponses.q1_lb_city || rawResponses.q1_lb_city_other ||
+                  ''
       },
       assessmentResponses: {
         raw_responses: rawResponses,
@@ -2715,10 +2655,10 @@ app.post('/api/submit-assessment', async (req, res) => {
       },
       // Also keep a flattened copy of raw responses for easy querying
       responses: rawResponses || {},
-      pdfData: pdfData,
-      reportText: reportText || '',
+      reportText: '',
       assessmentType: assessmentType,
-      status: 'completed'
+      status: 'completed',
+      processingStatus: 'pending'
     });
 
     console.log('🔵 [submit-assessment] Saving assessment to MongoDB...');
@@ -2726,29 +2666,114 @@ app.post('/api/submit-assessment', async (req, res) => {
     const saved = await assessmentDoc.save();
     console.log('✅ [submit-assessment] Assessment saved:', saved._id);
 
-    // 5) Send marketing email to user (no attachment)
-    try {
-      await sendAssessmentCompletionEmail(saved.userDetails, assessmentType, null);
-      console.log('✅ [submit-assessment] Client marketing email sent');
-      await Assessment.findByIdAndUpdate(saved._id, { emailSent: true, emailSentAt: getISTTimestamp() });
-    } catch (err) {
-      console.error('❌ [submit-assessment] Failed to send client email:', err.message || err);
-    }
+    // Return immediately after DB persistence so UI can show success quickly.
+    res.status(201).json({
+      success: true,
+      assessmentId: saved._id,
+      cloudinaryUrl: null,
+      processingQueued: true,
+      message: 'Assessment saved. Report/PDF/email processing is continuing in background.'
+    });
 
-    // 6) Admin notification email disabled per user request
-    // try {
-    //   const adminResult = await sendAdminNotificationEmail(saved.userDetails, assessmentType, reportText || '', pdfBuf, saved._id);
-    //   if (adminResult.success) {
-    //     console.log('✅ [submit-assessment] Admin notification email sent');
-    //   } else {
-    //     console.warn('⚠️ [submit-assessment] Admin email send responded with error:', adminResult.error);
-    //   }
-    // } catch (err) {
-    //   console.error('❌ [submit-assessment] Failed to send admin email:', err.message || err);
-    // }
+    // Continue expensive operations asynchronously after response.
+    setImmediate(async () => {
+      const assessmentId = saved._id;
+      const baseUrl = `http://localhost:${process.env.PORT || 5000}`;
+      let reportText = '';
+      let pdfBuf = null;
 
-    // 7) Return saved assessment info and Cloudinary link
-    return res.status(201).json({ success: true, assessmentId: saved._id, cloudinaryUrl: cloudinaryUrl || null });
+      try {
+        await Assessment.findByIdAndUpdate(assessmentId, {
+          processingStatus: 'in_progress',
+          processingStartedAt: getISTTimestamp()
+        });
+
+        console.log('⏳ [submit-assessment/bg] Generating comprehensive AI report...');
+        console.log('📋 [submit-assessment/bg] Assessment Type:', assessmentType);
+
+        let reportEndpoint = `${baseUrl}/api/generate-building-report`;
+        if (assessmentType === 'Tunnel') {
+          reportEndpoint = `${baseUrl}/api/generate-tunnel-report`;
+        } else if (assessmentType === 'Bridge') {
+          reportEndpoint = `${baseUrl}/api/generate-bridge-report`;
+        }
+        console.log('🔗 [submit-assessment/bg] Using report endpoint:', reportEndpoint);
+
+        const genRes = await axios.post(reportEndpoint, {
+          user_details: userDetails,
+          assessment_responses: assessmentResponses
+        }, { timeout: 120000 });
+
+        if (genRes && genRes.data && genRes.data.report) {
+          reportText = genRes.data.report;
+          await Assessment.findByIdAndUpdate(assessmentId, { reportText: reportText || '' });
+          console.log('✅ [submit-assessment/bg] Server generated report length:', reportText.length, 'characters');
+        } else {
+          throw new Error('Report generation returned no report');
+        }
+
+        console.log('🔄 [submit-assessment/bg] Generating PDF from reportText...');
+        pdfBuf = await generatePdfBufferFromReport(reportText || '', userDetails);
+        console.log('✅ [submit-assessment/bg] PDF generated, size:', pdfBuf.length);
+
+        let cloudinaryUrl = null;
+        let cloudinaryPublicId = null;
+
+        if (process.env.CLOUDINARY_CLOUD_NAME && pdfBuf) {
+          const cloudinaryService = require('./services/cloudinaryService');
+          const publicId = `report_${Date.now()}_${(userDetails.name || 'anon').replace(/\s+/g, '_')}`;
+          console.log('⬆️ [submit-assessment/bg] Uploading PDF to Cloudinary with publicId:', publicId);
+          const uploadResult = await cloudinaryService.uploadPdfBuffer(pdfBuf, publicId);
+          if (uploadResult && uploadResult.secure_url) {
+            cloudinaryUrl = uploadResult.secure_url;
+            cloudinaryPublicId = uploadResult.public_id;
+            console.log('✅ [submit-assessment/bg] Uploaded PDF to Cloudinary:', cloudinaryUrl);
+          }
+        }
+
+        const pdfData = pdfBuf ? {
+          filename: `OSHAM_Assessment_${userDetails.name.replace(/\s+/g, '_')}_${Date.now()}.pdf`,
+          contentType: 'application/pdf',
+          size: pdfBuf.length,
+          data: pdfBuf,
+          cloudinaryPublicId: cloudinaryPublicId || '',
+          cloudinaryUrl: cloudinaryUrl || '',
+          generatedAt: getISTTimestamp()
+        } : null;
+
+        await Assessment.findByIdAndUpdate(assessmentId, {
+          pdfData: pdfData,
+          processingStatus: 'completed',
+          processingCompletedAt: getISTTimestamp(),
+          aiReportReady: true,
+          pdfReady: !!pdfData
+        });
+
+        try {
+          await sendAssessmentCompletionEmail(saved.userDetails, assessmentType, null);
+          console.log('✅ [submit-assessment/bg] Client marketing email sent');
+          await Assessment.findByIdAndUpdate(assessmentId, {
+            emailSent: true,
+            emailSentAt: getISTTimestamp()
+          });
+        } catch (emailErr) {
+          console.error('❌ [submit-assessment/bg] Failed to send client email:', emailErr.message || emailErr);
+        }
+      } catch (bgErr) {
+        console.error('❌ [submit-assessment/bg] Background processing failed:', bgErr && bgErr.stack ? bgErr.stack : bgErr.message || bgErr);
+        try {
+          await Assessment.findByIdAndUpdate(saved._id, {
+            processingStatus: 'failed',
+            processingError: bgErr && bgErr.message ? bgErr.message : String(bgErr),
+            processingCompletedAt: getISTTimestamp()
+          });
+        } catch (updateErr) {
+          console.error('❌ [submit-assessment/bg] Failed to persist processing failure state:', updateErr.message || updateErr);
+        }
+      }
+    });
+
+    return;
 
   } catch (error) {
     console.error('❌ [submit-assessment] Error:', error && error.stack ? error.stack : error.message || error);
@@ -2841,6 +2866,9 @@ app.post('/api/contact-form', async (req, res) => {
   try {
     const formData = req.body;
     
+    // Accept both 'fullName' and 'name' from the frontend
+    formData.fullName = formData.fullName || formData.name;
+
     if (!formData.email || !formData.fullName) {
       return res.status(400).json({ 
         error: 'Missing required fields (email, fullName)' 
@@ -2893,24 +2921,372 @@ app.get('/api/user/assessments', authenticateToken, async (req, res) => {
     const userEmail = req.user.email;
     
     const assessments = await Assessment.find({ 'userDetails.email': userEmail })
-      .select('assessmentType userDetails.structureType createdAt submittedAt adminReport pdfData.cloudinaryUrl')
+      .select('assessmentType userDetails.structureType userDetails.location userDetails.name assessmentResponses.raw_responses.q5_structural_system responses.q5_structural_system responses.q1_city responses.q1_city_other responses.q1_steel_city responses.q1_steel_city_other responses.q1_heritage_city responses.q1_heritage_city_other responses.q1_lb_city responses.q1_lb_city_other createdAt submittedAt adminReport pdfData.cloudinaryUrl advancedResponses advancedAssessmentId advancedSubmittedAt')
       .sort({ createdAt: -1 });
-    
-    const assessmentsWithReportStatus = assessments.map((assessment, index) => ({
-      _id: assessment._id,
-      assessmentNumber: assessments.length - index, // Assessment 1, 2, 3...
-      assessmentType: assessment.assessmentType,
-      structureType: assessment.userDetails?.structureType || 'N/A',
-      submittedAt: assessment.submittedAt || assessment.createdAt,
-      hasAdminReport: !!assessment.adminReport?.gridFsFileId,
-      adminReportUrl: assessment.adminReport?.gridFsFileId ? `/api/proxy/pdf/${assessment._id}` : null,
-      aiReportUrl: assessment.pdfData?.cloudinaryUrl
-    }));
+
+    // Bulk-check which assessments have a FinalAssessment doc
+    const assessmentIds = assessments.map(a => a._id);
+    const finalDocs = await FinalAssessment.find({ basicAssessmentId: { $in: assessmentIds } })
+      .select('basicAssessmentId completedAt');
+    const finalMap = {};
+    finalDocs.forEach(f => { finalMap[String(f.basicAssessmentId)] = f.completedAt; });
+
+    const assessmentsWithReportStatus = assessments.map((assessment, index) => {
+      // Derive location: prefer stored userDetails.location, fall back to raw response city fields
+      const r = assessment.responses || {};
+      const derivedLocation =
+        assessment.userDetails?.location ||
+        r.q1_city || r.q1_city_other ||
+        r.q1_steel_city || r.q1_steel_city_other ||
+        r.q1_heritage_city || r.q1_heritage_city_other ||
+        r.q1_lb_city || r.q1_lb_city_other ||
+        '';
+
+      return {
+        _id: assessment._id,
+        assessmentNumber: assessments.length - index, // Assessment 1, 2, 3...
+        assessmentType: assessment.assessmentType,
+        structureType: assessment.assessmentResponses?.raw_responses?.q5_structural_system || assessment.responses?.q5_structural_system || assessment.userDetails?.structureType || 'N/A',
+        location: derivedLocation,
+        assessorName: assessment.userDetails?.name || '',
+        createdAt: assessment.createdAt,
+        submittedAt: assessment.submittedAt || assessment.createdAt,
+        hasAdminReport: !!assessment.adminReport?.gridFsFileId,
+        adminReportUrl: assessment.adminReport?.gridFsFileId ? `/api/proxy/pdf/${assessment._id}` : null,
+        aiReportUrl: assessment.pdfData?.cloudinaryUrl,
+        hasAdvancedResponses: !!(assessment.advancedAssessmentId || (assessment.advancedResponses && Object.keys(assessment.advancedResponses).length > 0)),
+        advancedAssessmentId: assessment.advancedAssessmentId || null,
+        advancedSubmittedAt: assessment.advancedSubmittedAt || null,
+        hasFinalAssessment: !!finalMap[String(assessment._id)],
+        finalCompletedAt: finalMap[String(assessment._id)] || null
+      };
+    });
     
     res.json({ success: true, assessments: assessmentsWithReportStatus });
   } catch (error) {
     console.error('Error fetching user assessments:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch assessments' });
+  }
+});
+
+// Save advanced questionnaire responses to an existing assessment
+// ── Save / update advanced questionnaire responses ──────────────────────────
+// Creates a document in the `advancedassessments` collection and stores a
+// back-reference on the base Assessment document.
+const sanitizeAdvancedPayload = (value) => {
+  if (value === null) return null;
+  if (Array.isArray(value)) {
+    return value.map(sanitizeAdvancedPayload);
+  }
+  if (typeof value !== 'object') {
+    return value;
+  }
+
+  const clean = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+    if (typeof v === 'undefined' || typeof v === 'function' || typeof v === 'symbol') continue;
+    clean[k] = sanitizeAdvancedPayload(v);
+  }
+  return clean;
+};
+
+app.post('/api/assessment/:id/advanced', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { advancedResponses } = req.body;
+    const userEmail = req.user.email;
+
+    if (!advancedResponses || typeof advancedResponses !== 'object') {
+      return res.status(400).json({ success: false, message: 'advancedResponses payload is required' });
+    }
+
+    // Verify base assessment exists and belongs to this user
+    const baseAssessment = await Assessment.findById(id);
+    if (!baseAssessment) {
+      return res.status(404).json({ success: false, message: 'Base assessment not found' });
+    }
+    if (baseAssessment.userDetails.email !== userEmail) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const structureType =
+      advancedResponses?._meta?.structureType ||
+      baseAssessment.assessmentResponses?.raw_responses?.q5_structural_system ||
+      baseAssessment.responses?.q5_structural_system ||
+      baseAssessment.userDetails?.structureType ||
+      'Building';
+
+    const assessmentType = baseAssessment.assessmentType || 'Building';
+    const formVersion = advancedResponses?._meta?.formVersion || '';
+
+    // Strip the _meta helper key from stored responses — all real fields go in `responses`
+    const { _meta, ...rawResponses } = advancedResponses;
+    const cleanResponses = sanitizeAdvancedPayload(rawResponses);
+
+    // ── Upsert into the dedicated AdvancedAssessment collection ──────────────
+    // If the user re-submits we overwrite (one advanced doc per base assessment).
+    let advancedDoc = await AdvancedAssessment.findOne({ baseAssessmentId: id });
+
+    if (advancedDoc) {
+      // Update existing document
+      advancedDoc.responses    = cleanResponses;
+      advancedDoc.structureType = structureType;
+      advancedDoc.formVersion  = formVersion;
+      advancedDoc.markModified('responses');
+      await advancedDoc.save();
+      console.log(`🔄 Advanced assessment updated  → ${advancedDoc._id}`);
+    } else {
+      // Create new document
+      advancedDoc = await AdvancedAssessment.create({
+        baseAssessmentId: id,
+        userEmail,
+        userName: baseAssessment.userDetails?.name || '',
+        structureType,
+        assessmentType,
+        formVersion,
+        responses: cleanResponses
+      });
+      console.log(`✅ Advanced assessment created  → ${advancedDoc._id}`);
+    }
+
+    // ── Keep back-reference + snapshot on the base Assessment ─────────────────
+    baseAssessment.advancedAssessmentId = advancedDoc._id;
+    baseAssessment.advancedResponses    = cleanResponses; // snapshot for quick access
+    baseAssessment.advancedSubmittedAt  = advancedDoc.updatedAt || advancedDoc.createdAt;
+    baseAssessment.updatedAt            = new Date();
+    baseAssessment.markModified('advancedResponses');
+    await baseAssessment.save();
+
+    // ── Auto-create / update FinalAssessment (both basic + advanced now complete) ─
+    try {
+      await FinalAssessment.findOneAndUpdate(
+        { basicAssessmentId: id },
+        {
+          userEmail: baseAssessment.userDetails.email,
+          userName: baseAssessment.userDetails.name || '',
+          advancedAssessmentId: advancedDoc._id,
+          structureType,
+          assessmentType,
+          location: baseAssessment.userDetails.location || '',
+          basicData: baseAssessment.responses || {},
+          advancedData: cleanResponses,
+          basicReportText: baseAssessment.reportText || '',
+          basicPdfUrl: baseAssessment.pdfData?.cloudinaryUrl || '',
+          completedAt: new Date(),
+          updatedAt: new Date()
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      console.log(`✅ FinalAssessment upserted for base assessment ${id}`);
+    } catch (finalErr) {
+      console.error('⚠️ FinalAssessment upsert failed (non-fatal):', finalErr.message);
+    }
+
+    const fieldCount = Object.keys(cleanResponses).length;
+    const sectionNames = Object.keys(cleanResponses).join(', ');
+    console.log(`   Sections saved: ${fieldCount}  [${sectionNames}]  |  Structure: ${structureType}`);
+
+    res.json({
+      success: true,
+      message: 'Advanced responses saved successfully',
+      assessmentId: id,
+      advancedAssessmentId: advancedDoc._id,
+      fieldsSaved: fieldCount,
+      savedAt: advancedDoc.updatedAt || advancedDoc.createdAt
+    });
+  } catch (error) {
+    console.error('❌ Error saving advanced responses:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to save advanced responses',
+      error: error.message
+    });
+  }
+});
+
+// ── Retrieve advanced assessment for a base assessment ────────────────────────
+app.get('/api/assessment/:id/advanced', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userEmail = req.user.email;
+
+    const baseAssessment = await Assessment.findById(id).select('userDetails.email advancedAssessmentId');
+    if (!baseAssessment) {
+      return res.status(404).json({ success: false, message: 'Assessment not found' });
+    }
+    if (baseAssessment.userDetails.email !== userEmail) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    const advancedDoc = await AdvancedAssessment.findOne({ baseAssessmentId: id });
+    if (!advancedDoc) {
+      return res.json({ success: true, exists: false, advancedResponses: null });
+    }
+
+    res.json({
+      success: true,
+      exists: true,
+      advancedAssessmentId: advancedDoc._id,
+      structureType: advancedDoc.structureType,
+      submittedAt: advancedDoc.submittedAt,
+      updatedAt: advancedDoc.updatedAt,
+      advancedResponses: advancedDoc.responses
+    });
+  } catch (error) {
+    console.error('❌ Error retrieving advanced responses:', error);
+    res.status(500).json({ success: false, message: 'Failed to retrieve advanced responses', error: error.message });
+  }
+});
+
+// ── Full report data for a single assessment (basic + advanced + final) ───────
+app.get('/api/assessment/:id/report', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userEmail = req.user.email;
+
+    const basic = await Assessment.findById(id).select('-pdfData.data');
+    if (!basic) return res.status(404).json({ success: false, message: 'Assessment not found' });
+    if (basic.userDetails.email !== userEmail) return res.status(403).json({ success: false, message: 'Access denied' });
+
+    const advanced = await AdvancedAssessment.findOne({ baseAssessmentId: id }) || null;
+    const final = await FinalAssessment.findOne({ basicAssessmentId: id }) || null;
+
+    res.json({ success: true, basic, advanced, final });
+  } catch (error) {
+    console.error('❌ Error fetching full report:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch report', error: error.message });
+  }
+});
+
+// ── Full assessment list: basic + advanced/final flags per assessment ─────────
+app.get('/api/user/full-assessments', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    const basics = await Assessment.find({ 'userDetails.email': userEmail })
+      .select('-pdfData.data -assessmentResponses')
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    const results = await Promise.all(basics.map(async (a) => {
+      const adv = await AdvancedAssessment.findOne({ baseAssessmentId: a._id })
+        .select('_id structureType submittedAt updatedAt').lean();
+      const fin = await FinalAssessment.findOne({ basicAssessmentId: a._id })
+        .select('_id completedAt').lean();
+
+      const raw = a.responses || {};
+      const structureType =
+        raw.q5_structural_system ||
+        a.userDetails?.structureType || '';
+      const location =
+        raw.q1_city || raw.q1_city_other ||
+        raw.q1_steel_city || raw.q1_lb_city ||
+        raw.q1_heritage_city ||
+        a.userDetails?.location || '';
+
+      return {
+        _id: a._id,
+        assessmentType: a.assessmentType,
+        structureType,
+        location,
+        assessorName: a.userDetails?.name || '',
+        createdAt: a.createdAt,
+        pdfUrl: a.pdfData?.cloudinaryUrl || null,
+        hasAdvanced: !!adv,
+        advancedId: adv?._id || null,
+        advancedAt: adv?.updatedAt || adv?.submittedAt || null,
+        hasFinal: !!fin,
+        finalId: fin?._id || null,
+        finalAt: fin?.completedAt || null
+      };
+    }));
+
+    res.json({ success: true, assessments: results });
+  } catch (error) {
+    console.error('❌ Error fetching full assessments:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch assessments', error: error.message });
+  }
+});
+const _uploadMemory = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB max
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only image files are accepted'), false);
+  },
+});
+
+/**
+ * POST /api/assessment/:id/upload-image
+ * Upload one assessment photo to Cloudinary.
+ * Allowed image size: 20 KB to 2 MB.
+ * Returns { success, url, publicId, width, height }
+ */
+app.post('/api/assessment/:id/upload-image', authenticateToken, _uploadMemory.single('image'), async (req, res) => {
+  try {
+    const MIN_IMAGE_BYTES = 20 * 1024; // 20 KB
+    const MAX_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB
+    const { id } = req.params;
+    const userEmail = req.user.email;
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image file provided.' });
+    }
+
+    if (req.file.size < MIN_IMAGE_BYTES) {
+      return res.status(400).json({
+        success: false,
+        message: 'Image is too small. Allowed image size is 20 KB to 2 MB.'
+      });
+    }
+
+    if (req.file.size > MAX_IMAGE_BYTES) {
+      return res.status(400).json({
+        success: false,
+        message: 'Image is too large. Allowed image size is 20 KB to 2 MB.'
+      });
+    }
+
+    // Verify the assessment exists and belongs to this user
+    const baseAssessment = await Assessment.findById(id).select('userDetails.email');
+    if (!baseAssessment) {
+      return res.status(404).json({ success: false, message: 'Assessment not found' });
+    }
+    if (baseAssessment.userDetails.email !== userEmail) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+      return res.status(503).json({ success: false, message: 'Image storage is not configured on this server.' });
+    }
+
+    const folder = `osham-assessments/${id}`;
+    const result = await cloudinaryService.uploadImageBuffer(req.file.buffer, req.file.originalname, folder);
+
+    console.log(`📸 Image uploaded for assessment ${id}: ${result.secure_url}`);
+    return res.json({
+      success: true,
+      url: result.secure_url,
+      publicId: result.public_id,
+      width: result.width,
+      height: result.height,
+    });
+  } catch (error) {
+    console.error('❌ Image upload error:', error);
+    if (error && /Only image files are accepted/i.test(error.message || '')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only image files are accepted.'
+      });
+    }
+    if (error && error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Image is too large. Allowed image size is 20 KB to 2 MB.'
+      });
+    }
+    return res.status(500).json({ success: false, message: 'Image upload failed', error: error.message });
   }
 });
 
@@ -2973,6 +3349,11 @@ app.get('/api/health', (req, res) => {
     database: dbStatus,
     mongodb: MONGODB_URI ? 'configured' : 'not configured'
   });
+});
+
+// Keep-alive endpoint for external uptime monitors
+app.get('/ping', (req, res) => {
+  res.status(200).send('Server is alive');
 });
 
 const PORT = process.env.PORT || 5000;

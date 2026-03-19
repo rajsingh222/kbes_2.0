@@ -1,0 +1,380 @@
+
+══════════════════════════════════════════════════════════════════════
+  ALL STRUCTURE TYPES — ADVANCED ASSESSMENT TEST SUITE
+══════════════════════════════════════════════════════════════════════
+
+══════════════════════════════════════════════════════════════════════
+  TEST 1 — STEEL STRUCTURE ADVANCED ASSESSMENT
+══════════════════════════════════════════════════════════════════════
+  ℹ️   Authenticated as all_struct_test@osham.test
+  ℹ️   Base assessment ID: 69ba56443e71e8ea0af61251
+  ✅  POST succeeded
+  ✅  GET returned data
+
+── Q1 — Usage Change ────────────────────────────────────────────────
+  ✅  Q1 usage_changed = "Yes"
+  ✅  Q1 previous_usage array saved
+  ✅  Q1 previous_usage_other saved
+
+── Q2 — Steel System ────────────────────────────────────────────────
+  ✅  Q2 structural_system saved
+  ✅  Q2 section_types array (4 items)
+  ✅  Q2 section_types_other saved
+
+── Q3 — Cracks ──────────────────────────────────────────────────────
+  ✅  Q3 has_cracks = "Yes"
+  ✅  Q3 crack_floor_levels saved
+  ✅  Q3 crack_elements (4 elements)
+  ✅  Q3.Beams locations saved
+  ✅  Q3.Beams max_crack_length = "320"
+  ✅  Q3.Beams total_cracks = "8"
+  ✅  Q3.Beams crack_depth_type saved
+  ✅  Q3.Columns locations saved
+  ✅  Q3.Columns max_crack_width = "1.8"
+  ✅  Q3.Connections locations saved
+  ✅  Q3.Connections total = "12"
+  ✅  Q3.Bracing locations saved
+  ✅  Q3.Bracing max_length = "150"
+
+── Q4 — Deformation ─────────────────────────────────────────────────
+  ✅  Q4 has_deformation = "Yes"
+  ✅  Q4 elements saved
+  ✅  Q4 deformation_types saved
+
+── Q5 — Material Deterioration ──────────────────────────────────────
+  ✅  Q5 has_deterioration = "Yes"
+  ✅  Q5 deterioration_elements saved
+  ✅  Q5 deterioration_types saved
+
+── Q6 — Age & Maintenance ───────────────────────────────────────────
+  ✅  Q6 building_age = "22"
+  ✅  Q6 maintenance_frequency saved
+  ✅  Q6 last_maintenance = "2024"
+
+── Q7 — Past Intervention ───────────────────────────────────────────
+  ✅  Q7 past_intervention = "Yes"
+  ✅  Q7 past_elements saved
+  ✅  Q7 intervention_types saved
+  ✅  Q7 intervention_types_other saved
+  ✅  Q7 primary_reason saved
+  ✅  Q7 intervention_year = "2020"
+  ✅  Q7 distress_again = "Yes"
+  ✅  Q7 recurring_issues saved
+  ✅  Q7 recurring_issues_other saved
+
+── Q8 — Foundation ──────────────────────────────────────────────────
+  ✅  Q8 settlement_has = "Yes"
+  ✅  Q8 settlement_types (2 types)
+  ✅  Q8 settlement_types_other saved
+
+── Q9 — Lateral Sway ────────────────────────────────────────────────
+  ✅  Q9 lateral_sway = "Yes"
+  ✅  Q9 sway_nature saved
+  ✅  Q9 structure_height = "18500"
+  ✅  Q9 max_lateral_displacement = "45"
+
+── Q10 — Disasters ──────────────────────────────────────────────────
+  ✅  Q10 disaster_has = "Yes"
+  ✅  Q10 disaster_types (4 items)
+  ✅  Q10 disaster_sound_heard = "Yes"
+  ✅  Q10 cracks_widen = "Yes"
+  ✅  Q10 cracks_new = "Yes"
+  ✅  Q10 deformation_increase = "Yes"
+  ✅  Q10 deterioration_increase = "Yes"
+  ✅  _meta stripped
+  ℹ️   Steel: 54 pass / 0 fail
+
+══════════════════════════════════════════════════════════════════════
+  TEST 2 — COMPOSITE STRUCTURE ADVANCED ASSESSMENT
+══════════════════════════════════════════════════════════════════════
+  ℹ️   Base assessment ID: 69ba56453e71e8ea0af6125b
+  ✅  POST succeeded
+  ✅  GET returned data
+
+── Q1 — Usage Change ────────────────────────────────────────────────
+  ✅  Q1 usage_changed = "Yes"
+  ✅  Q1 previous_usage saved (2 items)
+  ✅  Q1 previous_usage_other saved
+
+── Q2 — Composite System ────────────────────────────────────────────
+  ✅  Q2 system_type array (3 items)
+  ✅  Q2 system_type_other saved
+  ✅  Q2 steel_sections (5 items)
+  ✅  Q2 steel_sections_other saved
+
+── Q3 — Cracks ──────────────────────────────────────────────────────
+  ✅  Q3 cracks_observed = "Yes"
+  ✅  Q3 cracks_floor_level saved
+  ✅  Q3 cracks_elements (9 items)
+  ✅  Q3 cracks_elements_other saved
+  ✅  Q3 crack_orientation saved
+  ✅  Q3 crack_max_length = "780"
+  ✅  Q3 crack_avg_width = "1.8"
+  ✅  Q3 crack_depth_type saved
+  ✅  Q3 crack_total_locations = "18"
+  ✅  Q3 crack_conditions saved
+  ✅  Q3 comp_crack_floor_levels saved
+  ✅  Q3 steelbeam_locations saved
+  ✅  Q3 steelbeam_max_crack_length = "450"
+  ✅  Q3 steelbeam_crack_depth_type saved
+
+── Q4 — Deformation ─────────────────────────────────────────────────
+  ✅  Q4 deformation_observed = "Yes"
+  ✅  Q4 deformation_floor_level saved
+  ✅  Q4 deformation_elements (3 items)
+  ✅  Q4 deformation_elements_other saved
+  ✅  _meta stripped
+  ℹ️   Composite: 28 pass / 0 fail
+
+══════════════════════════════════════════════════════════════════════
+  TEST 3 — HERITAGE BUILDING ADVANCED ASSESSMENT
+══════════════════════════════════════════════════════════════════════
+  ℹ️   Base assessment ID: 69ba56453e71e8ea0af61265
+  ✅  POST succeeded
+  ✅  GET returned data
+
+── Q1 — Usage Change ────────────────────────────────────────────────
+  ✅  Q1 usage_changed = "Yes"
+  ✅  Q1 prev_usage_type (2 items)
+  ✅  Q1 prev_usage_type_other saved
+
+── Q2 — Masonry Information ─────────────────────────────────────────
+  ✅  Q2 masonry_type saved
+  ✅  Q2 composite_masonry_type saved
+  ✅  Q2 mortar_type saved
+
+── Q3 — Cracks ──────────────────────────────────────────────────────
+  ✅  Q3 has_cracks = "Yes"
+  ✅  Q3 crack_floor_levels saved
+  ✅  Q3 crack_elements (6 items)
+  ✅  Q3.Wall locations saved
+  ✅  Q3.Wall max_crack_length = "650"
+  ✅  Q3.Wall crack_depth_type saved
+  ✅  Q3.Pillar locations saved
+  ✅  Q3.Pillar max_crack_width = "3.0"
+  ✅  Q3.Junction locations saved
+  ✅  Q3.Junction crack_depth_type saved
+  ✅  Q3.Arch locations saved
+  ✅  Q3.Arch max_crack_length = "500"
+  ✅  Q3.Vault locations saved
+  ✅  Q3.Vault total_cracks = "9"
+  ✅  Q3.Dome locations saved
+  ✅  Q3.Dome max_crack_width = "3.2"
+
+── Q4 — Deformation ─────────────────────────────────────────────────
+  ✅  Q4 deformation_has = "Yes"
+  ✅  Q4 deformation_elements saved
+  ✅  Q4 deformation_types saved
+
+── Q5 — Material Deterioration ──────────────────────────────────────
+  ✅  Q5 deterioration_has = "Yes"
+  ✅  Q5 deterioration_elements saved
+  ✅  Q5 deterioration_types (5 items)
+
+── Q6 — Hollow-Sounding ─────────────────────────────────────────────
+  ✅  Q6 hollow_has = "Yes"
+  ✅  Q6 hollow_elements saved
+  ✅  Q6 hollow_locations saved
+
+── Q7 — Reinforcement ───────────────────────────────────────────────
+  ✅  Q7 rebar_provided = "Yes"
+  ✅  Q7 rebar_exposed = "Yes"
+  ✅  Q7 rebar_elements saved
+  ✅  Q7 rebar_avg_area = "0.12"
+  ✅  Q7 corrosion_visible = "Yes"
+
+── Q8 — Past Intervention ───────────────────────────────────────────
+  ✅  Q8 past_has = "Yes"
+  ✅  Q8 past_elements saved
+  ✅  Q8 intervention_types (4 items)
+  ✅  Q8 primary_reason saved
+  ✅  Q8 distress_again = "Yes"
+  ✅  Q8 recurring_issues (3 items)
+  ✅  Q8 recurring_issues_other saved
+
+── Q9 — Foundation ──────────────────────────────────────────────────
+  ✅  Q9 settlement_has = "Yes"
+  ✅  Q9 settlement_types (3 items)
+  ✅  Q9 settlement_types_other saved
+
+── Q10 — Environmental Impact ───────────────────────────────────────
+  ✅  Q10 veg_has = "Yes"
+  ✅  Q10 veg_locations (4 items)
+  ✅  Q10 veg_types saved
+  ✅  Q10 veg_distress saved
+  ✅  Q10 foundation_yn = "Yes"
+  ✅  Q10 foundation_issues (3 items)
+  ✅  Q10 affected_area = "22"
+  ✅  Q10 tree_distance = "2400"
+  ✅  Q10 growth_height = "4200"
+
+── Q11 — Natural Disasters ──────────────────────────────────────────
+  ✅  Q11 disaster_has = "Yes"
+  ✅  Q11 disaster_types (4 items)
+  ✅  Q11 sudden_sound = "Yes"
+  ✅  Q11 cracks_widen = "Yes"
+  ✅  Q11 deterioration_increase = "Yes"
+  ✅  _meta stripped
+  ℹ️   Heritage: 63 pass / 0 fail
+
+══════════════════════════════════════════════════════════════════════
+  TEST 4 — LOAD BEARING MASONRY ADVANCED ASSESSMENT
+══════════════════════════════════════════════════════════════════════
+  ℹ️   Base assessment ID: 69ba56453e71e8ea0af6126f
+  ✅  POST succeeded
+  ✅  GET returned data
+
+── Q1 — Usage Change ────────────────────────────────────────────────
+  ✅  Q1 usage_changed = "Yes"
+  ✅  Q1 previous_usage (2 items)
+  ✅  Q1 previous_usage_other saved
+
+── Q2 — Masonry Information ─────────────────────────────────────────
+  ✅  Q2 masonry_type (2 items)
+  ✅  Q2 composite_masonry_type saved
+  ✅  Q2 mortar_type (2 items)
+
+── Q3 — Cracks ──────────────────────────────────────────────────────
+  ✅  Q3 has_cracks = "Yes"
+  ✅  Q3 crack_floor_levels saved
+  ✅  Q3 crack_elements (8 items)
+  ✅  Q3 crack_conditions (3 items)
+  ✅  Q3 crack_conditions_other saved
+  ✅  Q3.ColumnPier locations (2 items)
+  ✅  Q3.Wall locations (3 items)
+  ✅  Q3.Wall orientations saved
+  ✅  Q3.CrossWall locations saved
+  ✅  Q3.Lintel locations saved
+  ✅  Q3.Arch locations saved
+  ✅  Q3.Staircase locations saved
+  ✅  Q3.FloorSlab locations saved
+  ✅  Q3.Roof locations saved
+  ✅  Q3.Parapet locations saved
+  ✅  Q3.PartitionWall locations saved
+  ✅  Q3.Junction locations (2 items)
+
+── Q4 — Deformation ─────────────────────────────────────────────────
+  ✅  Q4 deformation_has = "Yes"
+  ✅  Q4 deformation_floor_levels saved
+  ✅  Q4 deformation_elements (3 items)
+  ✅  Q4 deformation_elements_other saved
+
+── Q5 — Material Deterioration ──────────────────────────────────────
+  ✅  Q5 deterioration_has = "Yes"
+  ✅  Q5 deterioration_floor_levels saved
+  ✅  Q5 deterioration_elements (8 items)
+  ✅  Q5 foundation locations saved
+  ✅  Q5 lbwall locations saved
+  ✅  Q5 lintel locations saved
+  ✅  Q5 arch locations saved
+  ✅  Q5 staircase locations saved
+  ✅  Q5 floor locations saved
+  ✅  Q5 roof locations saved
+
+── Q6 — Hollow-sound areas ──────────────────────────────────────────
+  ✅  Q6 hollow_has = "Yes"
+  ✅  Q6 hollow_floor_levels saved
+  ✅  Q6 hollow_locations saved
+  ✅  Q6 hollow_locations_other saved
+  ✅  Q6 hollow_patch_count = "6"
+  ✅  Q6 hollow_patch_area = "0.8"
+
+── Q7 — Exposed Reinforcement ───────────────────────────────────────
+  ✅  Q7 reinforcement_provided = "Yes"
+  ✅  Q7 reinforcement_exposed = "Yes"
+  ✅  Q7 reinforcement_floor_levels saved
+  ✅  Q7 reinforcement_elements (4 items)
+  ✅  Q7 column rebar locations saved
+  ✅  Q7 lbwall rebar locations saved
+  ✅  Q7 lintel rebar locations saved
+  ✅  Q7 floor rebar locations saved
+  ✅  Q7 roof rebar locations saved
+  ✅  Q7 reinforcement_avg_area = "1200"
+  ✅  Q7 reinforcement_max_area = "3500"
+  ✅  Q7 corrosion_visible = "Yes"
+  ✅  Q7 diameter_reduction = "Yes"
+  ✅  Q7 affected_element saved
+  ✅  Q7 original_diameter = "12"
+  ✅  Q7 current_diameter = "9"
+  ✅  Q7 contributing_factors (3 items)
+  ✅  Q7 contributing_factors_other saved
+
+── Q8 — Past Intervention ───────────────────────────────────────────
+  ✅  Q8 intervention_done = "Yes"
+  ✅  Q8 intervention_floor_levels saved
+  ✅  Q8 intervention_elements (3 items)
+  ✅  Q8 intervention_elements_other saved
+  ✅  Q8 intervention_types (4 items)
+  ✅  Q8 intervention_types_other saved
+  ✅  Q8 intervention_reason saved
+  ✅  Q8 intervention_year = "2019"
+  ✅  Q8 distress_again = "Yes"
+  ✅  Q8 recurring_issues (2 items)
+  ✅  Q8 recurring_issues_other saved
+  ✅  Q8 deformation_specify saved
+
+── Q9 — Foundation Settlement + Vegetation ──────────────────────────
+  ✅  Q9 settlement_observed = "Yes"
+  ✅  Q9 settlement_types (3 items)
+  ✅  Q9 settlement_types_other saved
+  ✅  Q9 vegetation_observed = "Yes"
+  ✅  Q9 vegetation_locations (3 items)
+  ✅  Q9 vegetation_locations_other saved
+
+── Q10 — Vegetation Types / Distress ────────────────────────────────
+  ✅  Q10 vegetation_types (3 items)
+  ✅  Q10 vegetation_types_other saved
+  ✅  Q10 vegetation_distress (3 items)
+  ✅  Q10 vegetation_distress_other saved
+  ✅  Q10 foundation_affected = "Yes"
+  ✅  Q10 foundation_issues (3 items)
+  ✅  Q10 foundation_issues_other saved
+  ✅  Q10 vegetation_area = "18"
+  ✅  Q10 vegetation_length = "4800"
+  ✅  Q10 vegetation_tree_distance = "2200"
+  ✅  Q10 vegetation_height = "3600"
+
+── Q11 — Natural Disasters ──────────────────────────────────────────
+  ✅  Q11 disaster_experienced = "Yes"
+  ✅  Q11 disaster_types (4 items)
+  ✅  Q11 earthquake_intensity = "5.4"
+  ✅  Q11 disaster_date = "2021-07"
+  ✅  Q11 disaster_duration_hours = "6"
+  ✅  Q11 sudden_sound = "Yes"
+  ✅  Q11 cracks_widened = "Yes"
+  ✅  Q11 new_cracks = "Yes"
+  ✅  Q11 deformation_increased = "Yes"
+  ✅  Q11 deterioration_increased = "Yes"
+  ✅  Q11 new_deterioration = "No"
+  ✅  _meta stripped
+  ℹ️   LoadBearing: 104 pass / 0 fail
+
+── MongoDB advancedassessments — recent documents summary ───────────
+
+  Last 10 advanced assessment documents:
+    69ba56453e71e8ea0af61273  |  Load bearing masonry       |  all_struct_test@osham.test  |  18/3/2026, 1:07:41 pm
+    69ba56453e71e8ea0af61269  |  Heritage Building          |  all_struct_test@osham.test  |  18/3/2026, 1:07:41 pm
+    69ba56453e71e8ea0af6125f  |  Composite structure        |  all_struct_test@osham.test  |  18/3/2026, 1:07:41 pm
+    69ba56443e71e8ea0af61255  |  Steel structure            |  all_struct_test@osham.test  |  18/3/2026, 1:07:40 pm
+    69ba562f3e71e8ea0af61249  |  Load bearing masonry       |  all_struct_test@osham.test  |  18/3/2026, 1:07:19 pm
+    69ba562f3e71e8ea0af6123f  |  Heritage Building          |  all_struct_test@osham.test  |  18/3/2026, 1:07:19 pm
+    69ba562f3e71e8ea0af61235  |  Composite structure        |  all_struct_test@osham.test  |  18/3/2026, 1:07:19 pm
+    69ba562f3e71e8ea0af6122b  |  Steel structure            |  all_struct_test@osham.test  |  18/3/2026, 1:07:19 pm
+    69ba47bab3a08ab883560cf3  |  Load Bearing Masonry       |  e2e.test.1773815736462@sppl.com  |  18/3/2026, 12:05:38 pm
+    69ba47bab3a08ab883560cea  |  Heritage Structure         |  e2e.test.1773815736462@sppl.com  |  18/3/2026, 12:05:38 pm
+
+══════════════════════════════════════════════════════════════════════
+  FINAL TEST SUMMARY
+══════════════════════════════════════════════════════════════════════
+  Steel          54 pass  /   0 fail  →  🎉 ALL PASS
+  Composite      28 pass  /   0 fail  →  🎉 ALL PASS
+  Heritage       63 pass  /   0 fail  →  🎉 ALL PASS
+  LoadBearing   104 pass  /   0 fail  →  🎉 ALL PASS
+
+  ──────────────────────────────────────────────
+  Total checks : 249
+  Passed       : 249
+  Failed       : 0
+
+  🎉  ALL CHECKS PASSED — all structure types verified in MongoDB!
+

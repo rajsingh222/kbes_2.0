@@ -1,0 +1,800 @@
+
+══════════════════════════════════════════════════════════════════════
+  ADVANCED RCC ASSESSMENT — COMPLETE TEST SUITE
+══════════════════════════════════════════════════════════════════════
+
+── STEP 1 — Authenticate (login or register test user) ──────────────
+  ℹ️  Logged in as rcc_test_advanced@osham.test
+
+── STEP 2 — Obtain a base RCC assessment ID ─────────────────────────
+  ℹ️  Creating new base RCC assessment via /api/save-assessment …
+  ℹ️  Created base assessment: 69ba565f3e71e8ea0af6127d
+
+── STEP 3 — POST full advanced RCC payload ──────────────────────────
+  ✅ PASS  POST /api/assessment/:id/advanced  →  HTTP 200
+  ✅ PASS  Response success=true
+  ℹ️  Sections saved reported by server: 10
+  ℹ️  Advanced document ID: 69ba565f3e71e8ea0af61281
+
+── STEP 4 — GET /api/assessment/:id/advanced  and verify every field 
+  ✅ PASS  GET /api/assessment/:id/advanced  →  HTTP 200
+  ✅ PASS  Response has responses object
+
+── Q1 — Building Information ────────────────────────────────────────
+  ✅ PASS  Q1 section present
+  ✅ PASS  Q1 usage_changed = "Yes"
+  ✅ PASS  Q1 new_usage_types is array
+  ✅ PASS  Q1 new_usage_types contains Commercial
+  ✅ PASS  Q1 new_usage_type_other saved
+
+── Q2 — Cracking Distress ───────────────────────────────────────────
+  ✅ PASS  Q2 section present
+  ✅ PASS  Q2 has_cracks = "Yes"
+  ✅ PASS  Q2 floor_levels is array
+  ✅ PASS  Q2 elements_affected has 6 items
+  ✅ PASS  Q2 crack_conditions saved
+  ✅ PASS  Q2.Roof section present
+  ✅ PASS  Q2.Roof max_crack_length = "850"
+  ✅ PASS  Q2.Roof total_cracks = "14"
+  ✅ PASS  Q2.Roof crack_depth_type saved
+  ✅ PASS  Q2.Roof orientations_other saved
+  ✅ PASS  Q2.Beam section present
+  ✅ PASS  Q2.Beam max_crack_width = "2.5"
+  ✅ PASS  Q2.Beam cracks_gte_avg = "9"
+  ✅ PASS  Q2.Column section present
+  ✅ PASS  Q2.Column crack_depth_type = Deep crack
+  ✅ PASS  Q2.Floor section present
+  ✅ PASS  Q2.Floor avg_crack_width = "2.5"
+  ✅ PASS  Q2.Vibration_Damping_Devices present
+  ✅ PASS  Q2.VDD total_cracks = "4"
+  ✅ PASS  Q2.Machine_Foundation_Bearings present
+  ✅ PASS  Q2.MFB max_crack_width = "1.5"
+
+── Q3 — Deformation & Instability ───────────────────────────────────
+  ✅ PASS  Q3 section present
+  ✅ PASS  Q3 has_deformation = "Yes"
+  ✅ PASS  Q3 elements_affected has 5 items
+  ✅ PASS  Q3 deform_measurements is object
+  ✅ PASS  Q3 Beam deflection measurement saved
+  ✅ PASS  Q3.Roof_Slab section present
+  ✅ PASS  Q3.Roof_Slab deformation_types saved
+  ✅ PASS  Q3.Beam section present
+  ✅ PASS  Q3.Column tilting saved
+  ✅ PASS  Q3.Wall out-of-plane bulging saved
+  ✅ PASS  Q3.Floor_Slab section present
+
+── Q4 — Material Deterioration ──────────────────────────────────────
+  ✅ PASS  Q4 section present
+  ✅ PASS  Q4 has_deterioration = "Yes"
+  ✅ PASS  Q4 7 elements affected
+  ✅ PASS  Q4 det_measurements object saved
+  ✅ PASS  Q4.Roof_Slab deterioration_types saved
+  ✅ PASS  Q4.Beam spalling saved
+  ✅ PASS  Q4.Column section present
+  ✅ PASS  Q4.Wall interior locations saved
+  ✅ PASS  Q4.Wall exterior locations saved
+  ✅ PASS  Q4.Floor_Slab section present
+  ✅ PASS  Q4.Staircase section present
+  ✅ PASS  Q4.Parapet section present
+  ✅ PASS  Q4.Parapet rebar corrosion saved
+
+── Q5 — Hollow-sound areas ──────────────────────────────────────────
+  ✅ PASS  Q5 section present
+  ✅ PASS  Q5 has_hollow = "Yes"
+  ✅ PASS  Q5 hollow_count = "12"
+  ✅ PASS  Q5 hollow_area_m2 = "4.8"
+  ✅ PASS  Q5 7 elements affected
+  ✅ PASS  Q5.Roof_Slab locations saved
+  ✅ PASS  Q5.Beam locations saved
+  ✅ PASS  Q5.Column locations saved
+  ✅ PASS  Q5.Wall locations saved
+  ✅ PASS  Q5.Floor_Slab locations saved
+  ✅ PASS  Q5.Staircase locations saved
+  ✅ PASS  Q5.Parapet locations saved
+
+── Q6 — Reinforcement Condition ─────────────────────────────────────
+  ✅ PASS  Q6 section present
+  ✅ PASS  Q6 is_rebar_exposed = "Yes"
+  ✅ PASS  Q6 original_diameter_mm = "16"
+  ✅ PASS  Q6 current_diameter_mm = "13.5"
+  ✅ PASS  Q6 corrosion_visible = "Yes"
+  ✅ PASS  Q6 bar_diameter_reduced = "Yes"
+  ✅ PASS  Q6 contributing_factors saved
+  ✅ PASS  Q6 contributing_factors_other saved
+  ✅ PASS  Q6.Roof_Slab rebar locations saved
+  ✅ PASS  Q6.Beam rebar locations saved
+  ✅ PASS  Q6.Column rebar locations saved
+  ✅ PASS  Q6.Floor_Slab rebar locations saved
+  ✅ PASS  Q6.Staircase rebar locations saved
+
+── Q7 — Past Intervention ───────────────────────────────────────────
+  ✅ PASS  Q7 section present
+  ✅ PASS  Q7 was_intervention_done = "Yes"
+  ✅ PASS  Q7 elements_repaired saved
+  ✅ PASS  Q7 intervention_types saved
+  ✅ PASS  Q7 intervention_types_other saved
+  ✅ PASS  Q7 primary_reason = "Structural distress"
+  ✅ PASS  Q7 distress_recurred = "Yes"
+  ✅ PASS  Q7 recurring_issues saved
+  ✅ PASS  Q7 recurring_issues_other saved
+  ✅ PASS  Q7 deterioration_types saved
+
+── Q8 — Foundation Condition ────────────────────────────────────────
+  ✅ PASS  Q8 section present
+  ✅ PASS  Q8 settlement_observed = "Yes"
+  ✅ PASS  Q8 settlement_types saved (3 types)
+  ✅ PASS  Q8 settlement_types_other saved
+
+── Q9 — Environmental Impact (Vegetation) ───────────────────────────
+  ✅ PASS  Q9 section present
+  ✅ PASS  Q9 vegetation_present = "Yes"
+  ✅ PASS  Q9 vegetation_types saved
+  ✅ PASS  Q9 vegetation_types_other saved
+  ✅ PASS  Q9 distress_caused saved
+  ✅ PASS  Q9 distress_caused_other saved
+  ✅ PASS  Q9 affecting_foundation = "Yes"
+  ✅ PASS  Q9 foundation_issues saved
+  ✅ PASS  Q9 foundation_issues_other saved
+  ✅ PASS  Q9 affected_area_m2 = "18.5"
+  ✅ PASS  Q9 affected_zone_length_mm = "4200"
+  ✅ PASS  Q9 distance_of_trees_from_bldg = "1800"
+  ✅ PASS  Q9 vegetation_height_mm = "6500"
+
+── Q10 — Natural / Man-Made Disasters ───────────────────────────────
+  ✅ PASS  Q10 section present
+  ✅ PASS  Q10 disaster_experienced = "Yes"
+  ✅ PASS  Q10 disaster_types has 9 items
+  ✅ PASS  Q10 disaster_types_other saved
+  ✅ PASS  Q10 cracks_noticed_after = "Yes"
+  ✅ PASS  Q10 existing_cracks_widened = "Yes"
+  ✅ PASS  Q10 new_cracks_appeared = "Yes"
+  ✅ PASS  Q10 sudden_sound_heard = "Yes"
+  ✅ PASS  Q10.Earthquake section present
+  ✅ PASS  Q10.Earthquake year = "2021"
+  ✅ PASS  Q10.Earthquake severity saved
+  ✅ PASS  Q10.Earthquake questions are array
+  ✅ PASS  Q10.Earthquake description saved
+  ✅ PASS  Q10.Severe_Wind_Cyclone present
+  ✅ PASS  Q10.Fire year = "2019"
+  ✅ PASS  Q10.Explosion description saved
+  ✅ PASS  Q10.Flood severity saved
+  ✅ PASS  Q10.Landslides year = "2017"
+  ✅ PASS  Q10.Nearby_Excavation distance = "3500"
+  ✅ PASS  Q10.Volcanic_Eruptions present
+  ✅ PASS  Q10.Tsunami severity saved
+  ✅ PASS  _meta stripped from stored responses
+
+── STEP 5 — Raw MongoDB document (advancedassessments collection) ───
+  ℹ️  Document _id: 69ba565f3e71e8ea0af61281
+  ℹ️  Structure type: RCC Structure
+  ℹ️  Saved at: Wed Mar 18 2026 13:08:07 GMT+0530 (India Standard Time)
+  ℹ️  Top-level keys in responses: Q1_BuildingInformation, Q2_CrackingDistress, Q3_DeformationInstability, Q4_MaterialDeterioration, Q5_HollowSoundingAreas, Q6_ReinforcementCondition, Q7_PastIntervention, Q8_FoundationCondition, Q9_EnvironmentalImpact, Q10_NaturalDisasters
+
+📄 Full responses JSON:
+
+{
+  "Q1_BuildingInformation": {
+    "usage_changed": "Yes",
+    "new_usage_types": [
+      "Commercial",
+      "Institutional"
+    ],
+    "new_usage_type_other": "Mixed-use research facility"
+  },
+  "Q2_CrackingDistress": {
+    "has_cracks": "Yes",
+    "floor_levels": [
+      "Ground Floor",
+      "First Floor",
+      "Second Floor"
+    ],
+    "elements_affected": [
+      "Roof",
+      "Beam",
+      "Column",
+      "Floor",
+      "Vibration damping devices",
+      "Machine foundation bearings"
+    ],
+    "elements_other": "Cantilever projection",
+    "crack_conditions": [
+      "Leakage/Dampness",
+      "Exposed reinforcement near crack"
+    ],
+    "crack_conditions_other": "Salt efflorescence visible",
+    "Roof": {
+      "locations": [
+        "Centre of slab",
+        "Near column junction"
+      ],
+      "locations_other": "Over expansion joint",
+      "orientations": [
+        "Transverse",
+        "Diagonal"
+      ],
+      "orientations_other": "Radial pattern near column",
+      "max_crack_length": "850",
+      "avg_crack_length": "420",
+      "max_crack_width": "3.2",
+      "avg_crack_width": "1.8",
+      "total_cracks": "14",
+      "cracks_gte_avg": "6",
+      "cracks_lt_avg": "8",
+      "crack_depth_type": "Through crack"
+    },
+    "Beam": {
+      "locations": [
+        "Mid-span bottom",
+        "Near support"
+      ],
+      "locations_other": "At beam-column junction",
+      "orientations": [
+        "Vertical",
+        "Inclined 45°"
+      ],
+      "orientations_other": "Horizontal along stirrups",
+      "max_crack_length": "600",
+      "avg_crack_length": "310",
+      "max_crack_width": "2.5",
+      "avg_crack_width": "1.2",
+      "total_cracks": "22",
+      "cracks_gte_avg": "9",
+      "cracks_lt_avg": "13",
+      "crack_depth_type": "Shallow surface crack"
+    },
+    "Column": {
+      "locations": [
+        "Top third",
+        "Bottom junction with plinth"
+      ],
+      "locations_other": "Corner column – two faces",
+      "orientations": [
+        "Vertical",
+        "Horizontal"
+      ],
+      "orientations_other": "Spiral pattern",
+      "max_crack_length": "400",
+      "avg_crack_length": "200",
+      "max_crack_width": "1.8",
+      "avg_crack_width": "1.0",
+      "total_cracks": "8",
+      "cracks_gte_avg": "3",
+      "cracks_lt_avg": "5",
+      "crack_depth_type": "Deep crack (>25 mm)"
+    },
+    "Floor": {
+      "locations": [
+        "Centre panel",
+        "Near periphery wall"
+      ],
+      "locations_other": "",
+      "orientations": [
+        "Two-way diagonal"
+      ],
+      "orientations_other": "",
+      "max_crack_length": "1200",
+      "avg_crack_length": "700",
+      "max_crack_width": "4.0",
+      "avg_crack_width": "2.5",
+      "total_cracks": "5",
+      "cracks_gte_avg": "3",
+      "cracks_lt_avg": "2",
+      "crack_depth_type": "Through crack"
+    },
+    "Vibration_Damping_Devices": {
+      "locations": [
+        "Mounting plate interface"
+      ],
+      "locations_other": "Foundation anchor bolts area",
+      "orientations": [
+        "Circumferential"
+      ],
+      "orientations_other": "",
+      "max_crack_length": "120",
+      "avg_crack_length": "80",
+      "max_crack_width": "0.8",
+      "avg_crack_width": "0.5",
+      "total_cracks": "4",
+      "cracks_gte_avg": "2",
+      "cracks_lt_avg": "2",
+      "crack_depth_type": "Shallow surface crack"
+    },
+    "Machine_Foundation_Bearings": {
+      "locations": [
+        "Under bearing pad",
+        "Along edge"
+      ],
+      "locations_other": "",
+      "orientations": [
+        "Longitudinal"
+      ],
+      "orientations_other": "",
+      "max_crack_length": "200",
+      "avg_crack_length": "130",
+      "max_crack_width": "1.5",
+      "avg_crack_width": "0.9",
+      "total_cracks": "6",
+      "cracks_gte_avg": "3",
+      "cracks_lt_avg": "3",
+      "crack_depth_type": "Shallow surface crack"
+    }
+  },
+  "Q3_DeformationInstability": {
+    "has_deformation": "Yes",
+    "floor_levels": [
+      "First Floor",
+      "Second Floor"
+    ],
+    "elements_affected": [
+      "Roof slab",
+      "Beam",
+      "Column",
+      "Wall",
+      "Floor slab"
+    ],
+    "elements_other": "Staircase landing",
+    "deform_measurements": {
+      "Beam_Deflection": {
+        "value": "12",
+        "unit": "mm",
+        "span": "5000"
+      },
+      "Column_Tilt": {
+        "value": "8",
+        "unit": "mm/m",
+        "height": "3200"
+      },
+      "RoofSlab_Deflection": {
+        "value": "20",
+        "unit": "mm",
+        "span": "6000"
+      }
+    },
+    "Roof_Slab": {
+      "locations": [
+        "Centre",
+        "Corner panel"
+      ],
+      "locations_other": "",
+      "deformation_types": [
+        "Sagging",
+        "Visible deflection"
+      ],
+      "deformation_types_other": "Ponding of water"
+    },
+    "Beam": {
+      "locations": [
+        "Mid-span",
+        "Cantilever end"
+      ],
+      "locations_other": "",
+      "deformation_types": [
+        "Sagging",
+        "Lateral buckling"
+      ],
+      "deformation_types_other": ""
+    },
+    "Column": {
+      "locations": [
+        "Ground floor",
+        "Upper floor"
+      ],
+      "locations_other": "Corner column",
+      "deformation_types": [
+        "Tilting",
+        "Bulging"
+      ],
+      "deformation_types_other": ""
+    },
+    "Wall": {
+      "locations": [
+        "External wall – north",
+        "Infill panel"
+      ],
+      "locations_other": "",
+      "deformation_types": [
+        "Out-of-plane bulging",
+        "In-plane racking"
+      ],
+      "deformation_types_other": "Separation from frame"
+    },
+    "Floor_Slab": {
+      "locations": [
+        "Toilet block",
+        "Parking slab"
+      ],
+      "locations_other": "",
+      "deformation_types": [
+        "Sagging",
+        "Differential settlement pattern"
+      ],
+      "deformation_types_other": ""
+    }
+  },
+  "Q4_MaterialDeterioration": {
+    "has_deterioration": "Yes",
+    "floor_levels": [
+      "Ground Floor",
+      "First Floor"
+    ],
+    "elements_affected": [
+      "Roof slab",
+      "Beam",
+      "Column",
+      "Wall",
+      "Floor slab",
+      "Staircase",
+      "Parapet"
+    ],
+    "elements_other": "",
+    "det_measurements": {
+      "Beam_Carbonation": {
+        "depth_mm": "35",
+        "area_sqm": "2.4"
+      },
+      "Column_Chloride_Attack": {
+        "depth_mm": "20",
+        "area_sqm": "1.1"
+      },
+      "Roof_Spalling": {
+        "area_sqm": "3.5",
+        "avg_depth_mm": "15"
+      }
+    },
+    "Roof_Slab": {
+      "locations": [
+        "Soffit",
+        "Top surface"
+      ],
+      "locations_other": "",
+      "deterioration_types": [
+        "Spalling",
+        "Rebar corrosion",
+        "Efflorescence"
+      ]
+    },
+    "Beam": {
+      "locations": [
+        "Bottom flange",
+        "Web"
+      ],
+      "locations_other": "Shear zone",
+      "deterioration_types": [
+        "Spalling",
+        "Rebar corrosion",
+        "Carbonation"
+      ]
+    },
+    "Column": {
+      "locations": [
+        "Lower third"
+      ],
+      "locations_other": "",
+      "deterioration_types": [
+        "Rebar corrosion",
+        "Scaling"
+      ]
+    },
+    "Wall": {
+      "locations_interior": [
+        "Base – ground level",
+        "Around openings"
+      ],
+      "locations_exterior": [
+        "Parapet face",
+        "Plinth band area"
+      ],
+      "deterioration_types": [
+        "Dampness",
+        "Paint peeling",
+        "Efflorescence"
+      ]
+    },
+    "Floor_Slab": {
+      "locations": [
+        "Toilet / wet area slab soffit"
+      ],
+      "locations_other": "",
+      "deterioration_types": [
+        "Spalling",
+        "Staining"
+      ]
+    },
+    "Staircase": {
+      "locations": [
+        "Waist slab",
+        "Nosing"
+      ],
+      "locations_other": "",
+      "deterioration_types": [
+        "Wearing",
+        "Chipping"
+      ]
+    },
+    "Parapet": {
+      "locations": [
+        "Coping",
+        "Inner face"
+      ],
+      "locations_other": "",
+      "deterioration_types": [
+        "Cracking",
+        "Spalling",
+        "Rebar corrosion"
+      ]
+    }
+  },
+  "Q5_HollowSoundingAreas": {
+    "has_hollow": "Yes",
+    "floor_levels": [
+      "Ground Floor"
+    ],
+    "elements_affected": [
+      "Roof slab",
+      "Beam",
+      "Column",
+      "Wall",
+      "Floor slab",
+      "Staircase",
+      "Parapet"
+    ],
+    "elements_other": "",
+    "hollow_count": "12",
+    "hollow_area_m2": "4.8",
+    "Roof_Slab": {
+      "locations": [
+        "Centre panel",
+        "Near expansion joint"
+      ]
+    },
+    "Beam": {
+      "locations": [
+        "Mid-span soffit"
+      ]
+    },
+    "Column": {
+      "locations": [
+        "Upper third – west face"
+      ]
+    },
+    "Wall": {
+      "locations": [
+        "Internal partition – grid C-3"
+      ]
+    },
+    "Floor_Slab": {
+      "locations": [
+        "Bathroom block soffit",
+        "Below water tank"
+      ]
+    },
+    "Staircase": {
+      "locations": [
+        "Waist slab – 3rd flight"
+      ]
+    },
+    "Parapet": {
+      "locations": [
+        "East face coping"
+      ]
+    }
+  },
+  "Q6_ReinforcementCondition": {
+    "is_rebar_exposed": "Yes",
+    "floor_levels": [
+      "Ground Floor",
+      "First Floor"
+    ],
+    "elements_affected": [
+      "Roof slab",
+      "Beam",
+      "Column",
+      "Floor slab",
+      "Staircase"
+    ],
+    "elements_other": "",
+    "avg_exposed_area": "0.08",
+    "max_exposed_area": "0.25",
+    "corrosion_visible": "Yes",
+    "bar_diameter_reduced": "Yes",
+    "affected_bar_types": [
+      "Main reinforcement bars",
+      "Stirrups / links"
+    ],
+    "original_diameter_mm": "16",
+    "current_diameter_mm": "13.5",
+    "contributing_factors": [
+      "Carbonation",
+      "Chloride ingress",
+      "Poor cover"
+    ],
+    "contributing_factors_other": "Exposed to saline environment",
+    "Roof_Slab": {
+      "locations": [
+        "Soffit – central bay"
+      ]
+    },
+    "Beam": {
+      "locations": [
+        "Bottom tension zone",
+        "Near support stirrups"
+      ]
+    },
+    "Column": {
+      "locations": [
+        "Plinth level",
+        "Top projection"
+      ]
+    },
+    "Floor_Slab": {
+      "locations": [
+        "Toilet slab soffit"
+      ]
+    },
+    "Staircase": {
+      "locations": [
+        "Waist slab underside"
+      ]
+    }
+  },
+  "Q7_PastIntervention": {
+    "was_intervention_done": "Yes",
+    "floor_levels": [
+      "Ground Floor",
+      "First Floor",
+      "Second Floor"
+    ],
+    "elements_repaired": [
+      "Beam",
+      "Column",
+      "Wall",
+      "Roof slab"
+    ],
+    "elements_other": "Plinth protection",
+    "intervention_types": [
+      "Crack filling / grouting",
+      "Patch repair",
+      "Jacketing",
+      "Waterproofing"
+    ],
+    "intervention_types_other": "Torque tightening of anchor bolts",
+    "primary_reason": "Structural distress",
+    "primary_reason_other": "",
+    "distress_recurred": "Yes",
+    "recurring_issues": [
+      "Cracking at same location",
+      "Rebar corrosion continuing",
+      "Dampness returning"
+    ],
+    "recurring_issues_other": "Delamination of patch repair",
+    "deterioration_types": [
+      "Carbonation",
+      "Chloride attack",
+      "Freeze-thaw"
+    ]
+  },
+  "Q8_FoundationCondition": {
+    "settlement_observed": "Yes",
+    "settlement_types": [
+      "Uniform settlement",
+      "Differential settlement",
+      "Tilting"
+    ],
+    "settlement_types_other": "Heave in soft clay pocket under column C-7"
+  },
+  "Q9_EnvironmentalImpact": {
+    "vegetation_present": "Yes",
+    "vegetation_types": [
+      "Grass / weeds",
+      "Shrubs",
+      "Trees"
+    ],
+    "vegetation_types_other": "Banyan aerial roots",
+    "distress_caused": [
+      "Cracking",
+      "Moisture retention",
+      "Root penetration in joints"
+    ],
+    "distress_caused_other": "Organic acid attack on concrete",
+    "affecting_foundation": "Yes",
+    "foundation_issues": [
+      "Root infiltration near footing",
+      "Soil erosion"
+    ],
+    "foundation_issues_other": "Undermining of plinth beam",
+    "affected_area_m2": "18.5",
+    "affected_zone_length_mm": "4200",
+    "distance_of_trees_from_bldg": "1800",
+    "vegetation_height_mm": "6500"
+  },
+  "Q10_NaturalDisasters": {
+    "disaster_experienced": "Yes",
+    "disaster_types": [
+      "Earthquake",
+      "Severe Wind/Cyclone",
+      "Fire",
+      "Flood",
+      "Explosion",
+      "Nearby excavation",
+      "Landslides",
+      "Volcanic Eruptions",
+      "Tsunami"
+    ],
+    "disaster_types_other": "Industrial blast from adjacent plant",
+    "cracks_noticed_after": "Yes",
+    "existing_cracks_widened": "Yes",
+    "new_cracks_appeared": "Yes",
+    "sudden_sound_heard": "Yes",
+    "Earthquake": {
+      "year": "2021",
+      "severity": "Moderate (MMI VI)",
+      "questions": [
+        "Falling objects",
+        "Cracking of plaster",
+        "Visible structural cracks"
+      ],
+      "description": "Column base cracks widened; staircase railing anchor pulled out."
+    },
+    "Severe_Wind_Cyclone": {
+      "year": "2020",
+      "severity": "Category 2 cyclone",
+      "questions": [
+        "Roof sheet blown off",
+        "Parapet damage"
+      ],
+      "description": "Parapet wall toppled on east side; roof insulation damaged."
+    },
+    "Fire": {
+      "year": "2019",
+      "severity": "3-hour fire – electrical room",
+      "questions": [
+        "Spalling of concrete",
+        "Color change of concrete",
+        "Rebar exposure"
+      ],
+      "description": "Ground floor electrical room fire caused severe spalling over 12 m²."
+    },
+    "Explosion": {
+      "year": "2018",
+      "description": "Gas cylinder explosion in service area; blast wave cracked two columns."
+    },
+    "Flood": {
+      "year": "2022",
+      "severity": "1.2 m water level",
+      "questions": [
+        "Scour at foundation",
+        "Dampness post-flood",
+        "Efflorescence"
+      ],
+      "description": "Monsoon flooding; ground floor fully submerged. Foundation scour observed at grid A-1."
+    },
+    "Landslides": {
+      "year": "2017",
+      "description": "Retaining wall behind building failed causing minor undermining of plinth."
+    },
+    "Nearby_Excavation": {
+      "year": "2023",
+      "distance": "3500",
+      "description": "Metro rail construction 35 m away caused differential settlement of 8 mm."
+    },
+    "Volcanic_Eruptions": {
+      "year": "2015",
+      "description": "Minor seismic activity associated with distant volcanic event; no structural damage noted at time."
+    },
+    "Tsunami": {
+      "year": "2004",
+      "severity": "4 m inundation",
+      "description": "Coastal building; foundation scour and ground floor column base damage from 2004 tsunami."
+    }
+  }
+}
+
+══════════════════════════════════════════════════════════════════════
+  TEST SUMMARY
+══════════════════════════════════════════════════════════════════════
+  Total checks : 128
+  Passed       : 128
+  Failed       : 0
+
+  🎉  ALL CHECKS PASSED — every Q1-Q10 field is saved correctly in MongoDB!
+

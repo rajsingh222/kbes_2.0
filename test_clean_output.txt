@@ -1,0 +1,109 @@
+
+══════════════════════════════════════════════════
+  OSHAS — Basic Questionnaire Deep DB Verify
+  API: http://localhost:5000
+══════════════════════════════════════════════════
+  ✔ Server reachable — DB: connected
+
+▶ 1. RCC Structure
+  ℹ Sending 61 response keys → POST /api/save-assessment
+  ✔ Saved → ID: 69ba52023e71e8ea0af61214
+  ✔ Fetched from DB successfully
+  ✔ assessmentType = "Building" ✓
+
+  — userDetails —
+  ℹ userDetails: 8/8 fields verified
+  ✔ All 8 userDetails fields saved correctly
+
+  — responses (flat key store) —
+  ℹ responses: 61/61 fields verified
+  ✔ All 61 fields saved correctly
+
+  — assessmentResponses.raw_responses —
+  ℹ assessmentResponses: 61/61 fields verified
+  ✔ All 61 fields saved correctly
+
+▶ 2. Steel Structure
+  ℹ Sending 61 response keys → POST /api/save-assessment
+  ✔ Saved → ID: 69ba52023e71e8ea0af61217
+  ✔ Fetched from DB successfully
+  ✔ assessmentType = "Building" ✓
+
+  — userDetails —
+  ℹ userDetails: 8/8 fields verified
+  ✔ All 8 userDetails fields saved correctly
+
+  — responses (flat key store) —
+  ℹ responses: 61/61 fields verified
+  ✔ All 61 fields saved correctly
+
+  — assessmentResponses.raw_responses —
+  ℹ assessmentResponses: 61/61 fields verified
+  ✔ All 61 fields saved correctly
+
+▶ 3. Composite Structure (RCC+Steel)
+  ℹ Sending 70 response keys → POST /api/save-assessment
+  ✔ Saved → ID: 69ba52023e71e8ea0af6121a
+  ✔ Fetched from DB successfully
+  ✔ assessmentType = "Building" ✓
+
+  — userDetails —
+  ℹ userDetails: 8/8 fields verified
+  ✔ All 8 userDetails fields saved correctly
+
+  — responses (flat key store) —
+  ℹ responses: 70/70 fields verified
+  ✔ All 70 fields saved correctly
+
+  — assessmentResponses.raw_responses —
+  ℹ assessmentResponses: 70/70 fields verified
+  ✔ All 70 fields saved correctly
+
+▶ 4. Heritage Structure
+  ℹ Sending 57 response keys → POST /api/save-assessment
+  ✔ Saved → ID: 69ba52023e71e8ea0af6121d
+  ✔ Fetched from DB successfully
+  ✔ assessmentType = "Building" ✓
+
+  — userDetails —
+  ℹ userDetails: 8/8 fields verified
+  ✔ All 8 userDetails fields saved correctly
+
+  — responses (flat key store) —
+  ℹ responses: 57/57 fields verified
+  ✔ All 57 fields saved correctly
+
+  — assessmentResponses.raw_responses —
+  ℹ assessmentResponses: 57/57 fields verified
+  ✔ All 57 fields saved correctly
+
+▶ 5. Load Bearing Masonry
+  ℹ Sending 65 response keys → POST /api/save-assessment
+  ✔ Saved → ID: 69ba52023e71e8ea0af61220
+  ✔ Fetched from DB successfully
+  ✔ assessmentType = "Building" ✓
+
+  — userDetails —
+  ℹ userDetails: 8/8 fields verified
+  ✔ All 8 userDetails fields saved correctly
+
+  — responses (flat key store) —
+  ℹ responses: 65/65 fields verified
+  ✔ All 65 fields saved correctly
+
+  — assessmentResponses.raw_responses —
+  ℹ assessmentResponses: 65/65 fields verified
+  ✔ All 65 fields saved correctly
+
+▶ FINAL SUMMARY
+
+  Structure Type  Status  Fields Sent  Fields Saved  Missing  Mismatch
+  ──────────────────────────────────────────────────────────────────────────────────────────
+  1. RCC Structure  PASS    61  61  0  0
+  2. Steel Structure  PASS    61  61  0  0
+  3. Composite Structure (RCC+Steel)  PASS    70  70  0  0
+  4. Heritage Structure  PASS    57  57  0  0
+  5. Load Bearing Masonry  PASS    65  65  0  0
+
+  ✔  All 5 structure types — every field saved correctly to MongoDB!
+

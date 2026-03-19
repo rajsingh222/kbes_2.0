@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OSHMAES – User Guide: Basic Assessment</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.75;
+      color: #1a1a2e;
+      background: #fff;
+    }
+    @media print {
+      .page-break { page-break-before: always; }
+      body { font-size: 12px; }
+      .cover { page-break-after: always; }
+    }
+
+    /* Cover */
+    .cover {
+      min-height: 100vh;
+      background: linear-gradient(145deg, #0f3460 0%, #16213e 60%, #1a1a2e 100%);
+      color: #fff;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 60px 40px;
+    }
+    .cover .logo-area {
+      width: 120px; height: 120px;
+      border: 3px dashed rgba(255,255,255,0.35);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 30px;
+      font-size: 11px; color: rgba(255,255,255,0.45);
+    }
+    .cover h1 { font-size: 30px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+    .cover .subtitle { font-size: 14px; color: #a8dadc; margin-bottom: 36px; line-height: 1.9; }
+    .cover .badge { background: #e63946; color: #fff; font-size: 13px; font-weight: 700; padding: 9px 32px; border-radius: 30px; letter-spacing: 1px; margin-bottom: 44px; display: inline-block; }
+    .cover .guide-title { font-size: 21px; font-weight: 700; color: #a8dadc; margin-bottom: 10px; }
+    .cover .meta { font-size: 12px; color: rgba(255,255,255,0.5); }
+    .cover .meta span { display: block; margin-top: 5px; }
+
+    /* Screenshot needed list */
+    .screenshots-needed {
+      background: #fff8e1;
+      border: 2px solid #f0a500;
+      border-radius: 8px;
+      padding: 28px 32px;
+      margin: 40px 0 56px;
+    }
+    .screenshots-needed h2 { font-size: 16px; color: #7b5000; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .screenshots-needed ol { padding-left: 22px; }
+    .screenshots-needed li { margin-bottom: 9px; font-size: 12.5px; color: #5a4000; line-height: 1.6; }
+    .screenshots-needed li strong { color: #3a2000; }
+
+    /* Content wrapper */
+    .content { max-width: 860px; margin: 0 auto; padding: 50px 48px 80px; }
+
+    /* TOC */
+    .toc { background: #f4f7fc; border-left: 5px solid #0f3460; padding: 30px 36px; border-radius: 6px; margin-bottom: 56px; }
+    .toc h2 { font-size: 16px; color: #0f3460; margin-bottom: 16px; }
+    .toc ol { padding-left: 20px; }
+    .toc li { margin-bottom: 7px; font-size: 13px; color: #16213e; }
+    .toc li a { color: #0f3460; text-decoration: none; }
+    .toc li a:hover { text-decoration: underline; }
+
+    /* Section */
+    .section { margin-bottom: 56px; }
+    .section-header { display: flex; align-items: center; gap: 14px; border-bottom: 2px solid #0f3460; padding-bottom: 10px; margin-bottom: 24px; }
+    .step-badge { min-width: 38px; height: 38px; background: #0f3460; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; }
+    .section h2 { font-size: 18px; color: #0f3460; font-weight: 700; }
+    .section h3 { font-size: 14px; color: #16213e; margin: 22px 0 10px; font-weight: 700; }
+    .section p { margin-bottom: 12px; }
+
+    /* Screenshot placeholder */
+    .screenshot-box { border: 2px dashed #90aecb; border-radius: 8px; background: #f0f5fb; padding: 18px; margin: 18px 0 24px; text-align: center; }
+    .screenshot-box .img-area { width: 100%; min-height: 200px; border: 1px dashed #b0c4de; border-radius: 6px; background: #e8eff8; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #6b8cae; font-size: 13px; gap: 8px; padding: 30px; }
+    .screenshot-box .img-area .icon { font-size: 34px; }
+    .screenshot-box .img-area .fig-label { font-weight: 700; font-size: 13px; }
+    .screenshot-box .caption { font-size: 11.5px; color: #6b8cae; margin-top: 8px; font-style: italic; }
+
+    /* Steps list */
+    .steps { counter-reset: step-counter; list-style: none; padding: 0; }
+    .steps li { counter-increment: step-counter; position: relative; padding: 12px 16px 12px 52px; margin-bottom: 10px; background: #f8fafd; border-radius: 6px; border-left: 4px solid #a8dadc; }
+    .steps li::before { content: counter(step-counter); position: absolute; left: 14px; top: 50%; transform: translateY(-50%); background: #0f3460; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+
+    /* Note/Warning/Tip */
+    .note, .warning, .tip { border-radius: 6px; padding: 13px 18px; margin: 16px 0; font-size: 12.5px; }
+    .note    { background: #e8f4fd; border-left: 5px solid #3498db; }
+    .warning { background: #fff3cd; border-left: 5px solid #f0a500; }
+    .tip     { background: #e6f9f0; border-left: 5px solid #27ae60; }
+    .note strong, .warning strong, .tip strong { display: block; margin-bottom: 4px; }
+
+    /* Structure cards */
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; margin: 18px 0 24px; }
+    .card { border: 1px solid #cdd8ea; border-radius: 8px; padding: 13px 15px; background: #f8fafd; }
+    .card .card-icon { font-size: 22px; margin-bottom: 5px; }
+    .card .card-title { font-weight: 700; font-size: 12.5px; color: #0f3460; }
+    .card .card-desc  { font-size: 11px; color: #5a6a7a; margin-top: 3px; }
+
+    /* Payment flow diagram */
+    .pay-flow { display: flex; align-items: center; justify-content: center; gap: 0; flex-wrap: wrap; margin: 22px 0 28px; }
+    .pay-step { background: #0f3460; color: #fff; border-radius: 8px; padding: 12px 16px; text-align: center; font-size: 11.5px; min-width: 110px; }
+    .pay-step .ps-num { font-size: 18px; font-weight: 800; color: #a8dadc; }
+    .pay-step .ps-label { margin-top: 4px; line-height: 1.4; }
+    .pay-arrow { color: #0f3460; font-size: 20px; padding: 0 6px; }
+
+    /* Callout */
+    .callout { background: #0f3460; color: #fff; border-radius: 8px; padding: 20px 24px; margin: 22px 0; font-size: 13px; }
+    .callout h4 { font-size: 14px; margin-bottom: 8px; color: #a8dadc; }
+    .callout ul { padding-left: 20px; margin-top: 8px; }
+    .callout ul li { margin-bottom: 5px; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; margin: 14px 0 22px; font-size: 12.5px; }
+    th { background: #0f3460; color: #fff; padding: 9px 14px; text-align: left; font-weight: 600; }
+    td { padding: 8px 14px; border-bottom: 1px solid #dee8f5; }
+    tr:nth-child(even) td { background: #f4f7fc; }
+
+    /* Footer */
+    .footer { text-align: center; font-size: 11px; color: #8a9bb5; border-top: 1px solid #dee8f5; padding-top: 28px; margin-top: 40px; }
+  </style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover">
+  <div class="logo-area">
+    <!-- Replace with: <img src="logo.png" style="width:90px;border-radius:50%"> -->
+    LOGO
+  </div>
+  <h1>OSHMAES</h1>
+  <p class="subtitle">
+    AI-Powered Online Structural Health<br>Monitoring and Assessment Expert System
+  </p>
+  <span class="badge">USER GUIDE</span>
+  <p class="guide-title">How to Create a Basic Assessment</p>
+  <div class="meta">
+    <span>Version 1.0</span>
+    <span>For end users &amp; field engineers</span>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="content">
+
+  <!-- Introduction -->
+  <div class="section" style="margin-top:40px;">
+    <h2 style="font-size:22px; color:#0f3460; margin-bottom:14px;">Introduction</h2>
+    <p>
+      <strong>OSHMAES</strong> is an AI-powered expert system for assessing the structural health
+      of buildings, bridges, tunnels and towers. A <em>Basic Assessment</em> is the starting
+      point — it captures key details about a structure, processes a secure payment and then
+      generates an AI-driven structural health report with a downloadable PDF.
+    </p>
+    <p>
+      This guide walks you through every step from login to downloading your completed report.
+      The entire process typically takes <strong>10–15 minutes</strong>.
+    </p>
+    <div class="note">
+      <strong>📌 Before you begin</strong>
+      Have the following information ready: structure name/address, year of construction,
+      location, current usage type and your payment card details.
+    </div>
+  </div>
+
+  <!-- SCREENSHOTS NEEDED BOX -->
+  <div class="screenshots-needed">
+    <h2>📸 Screenshots Required for This Guide</h2>
+    <p style="font-size:12.5px; color:#7b5000; margin-bottom:14px;">
+      Please provide the following screenshots from your application. Each one is labelled with
+      the figure number where it will appear in this guide.
+    </p>
+    <ol>
+      <li><strong>Fig 1.1</strong> – The <em>Registration / Sign Up</em> page (showing name, email, password fields)</li>
+      <li><strong>Fig 1.2</strong> – The <em>Login</em> page (showing email and password fields with login button)</li>
+      <li><strong>Fig 2.1</strong> – The <em>User Dashboard</em> with the "New Assessment" or "Start Assessment" button clearly visible</li>
+      <li><strong>Fig 3.1</strong> – The <em>Personal &amp; Organization Details</em> form (name, email, phone, organization fields)</li>
+      <li><strong>Fig 4.1</strong> – The <em>Structure Type selection</em> screen (showing all structure type options)</li>
+      <li><strong>Fig 5.1</strong> – The <em>Basic Structure Information</em> form section (Q1–Q5 fields visible)</li>
+      <li><strong>Fig 6.1</strong> – The <em>Structural Distress Questions</em> screen (first half of the detailed questions)</li>
+      <li><strong>Fig 6.2</strong> – The <em>Structural Distress Questions</em> screen (second half / bottom section)</li>
+      <li><strong>Fig 7.1</strong> – The <em>Review &amp; Summary</em> page (showing all answers before submission)</li>
+      <li><strong>Fig 8.1</strong> – The <em>Payment page</em> showing the amount (₹ / $) and "Proceed to Pay" button</li>
+      <li><strong>Fig 8.2</strong> – The <em>Razorpay checkout modal / popup</em> (the payment gateway screen)</li>
+      <li><strong>Fig 8.3</strong> – The <em>Payment Success</em> confirmation screen</li>
+      <li><strong>Fig 9.1</strong> – The <em>Processing / Generating Report</em> loading screen (after payment)</li>
+      <li><strong>Fig 9.2</strong> – The <em>Assessment Results</em> page with "View Report" and "Download PDF" buttons</li>
+      <li><strong>Fig 9.3</strong> – The first page of the <em>generated PDF report</em></li>
+    </ol>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h2>📋 Table of Contents</h2>
+    <ol>
+      <li><a href="#step1">Step 1 – Register / Log In</a></li>
+      <li><a href="#step2">Step 2 – Start a New Assessment</a></li>
+      <li><a href="#step3">Step 3 – Enter Your Personal / Organization Details</a></li>
+      <li><a href="#step4">Step 4 – Select the Structure Type</a></li>
+      <li><a href="#step5">Step 5 – Fill in the Assessment Form</a></li>
+      <li><a href="#step6">Step 6 – Answer Structural Distress Questions</a></li>
+      <li><a href="#step7">Step 7 – Review &amp; Confirm Your Answers</a></li>
+      <li><a href="#step8">Step 8 – Complete Payment</a></li>
+      <li><a href="#step9">Step 9 – View &amp; Download Your Report</a></li>
+      <li><a href="#faq">Frequently Asked Questions (FAQ)</a></li>
+    </ol>
+  </div>
+
+  <!-- STEP 1 – Register / Log In -->
+  <div class="section page-break" id="step1">
+    <div class="section-header">
+      <div class="step-badge">1</div>
+      <h2>Register / Log In</h2>
+    </div>
+    <p>
+      You need an OSHMAES account before you can run an assessment.
+      New users must register; returning users can log in directly.
+    </p>
+
+    <h3>New User — Sign Up</h3>
+    <ol class="steps">
+      <li>Open the OSHMAES application URL in your browser.</li>
+      <li>Click <strong>"Sign Up"</strong> or <strong>"Register"</strong> on the home screen.</li>
+      <li>Enter your <strong>Full Name</strong>, <strong>Email Address</strong> and <strong>Password</strong>.</li>
+      <li>Click <strong>"Create Account"</strong> and verify your email via the link sent to your inbox.</li>
+    </ol>
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 1.1 — Insert screenshot here</div>
+        <span>Registration / Sign Up page</span>
+      </div>
+      <div class="caption">Fig 1.1 – Registration / Sign Up Screen</div>
+    </div>
+
+    <h3>Existing User — Log In</h3>
+    <ol class="steps">
+      <li>Go to the OSHMAES login page.</li>
+      <li>Enter your registered <strong>Email Address</strong> and <strong>Password</strong>.</li>
+      <li>Click <strong>"Log In"</strong> — you will be taken to your dashboard.</li>
+    </ol>
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 1.2 — Insert screenshot here</div>
+        <span>Login page</span>
+      </div>
+      <div class="caption">Fig 1.2 – Login Screen</div>
+    </div>
+
+    <div class="tip">
+      <strong>✅ Tip</strong>
+      Use a valid, accessible email address — your completed report will be sent here automatically after the assessment is processed.
+    </div>
+  </div>
+
+  <!-- STEP 2 – Start a New Assessment -->
+  <div class="section page-break" id="step2">
+    <div class="section-header">
+      <div class="step-badge">2</div>
+      <h2>Start a New Assessment</h2>
+    </div>
+    <p>
+      After logging in you will land on your <strong>Dashboard</strong>, which shows all your
+      previous assessments and their statuses.
+    </p>
+    <ol class="steps">
+      <li>On the dashboard, click the <strong>"New Assessment"</strong> or <strong>"Start Assessment"</strong> button.</li>
+      <li>You will be taken to the assessment form.</li>
+    </ol>
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 2.1 — Insert screenshot here</div>
+        <span>User Dashboard with "New Assessment" button highlighted</span>
+      </div>
+      <div class="caption">Fig 2.1 – User Dashboard</div>
+    </div>
+    <div class="note">
+      <strong>📌 Note</strong>
+      You can view, re-open and download reports from all past assessments on the dashboard at any time.
+    </div>
+  </div>
+
+  <!-- STEP 3 – Personal / Org Details -->
+  <div class="section page-break" id="step3">
+    <div class="section-header">
+      <div class="step-badge">3</div>
+      <h2>Enter Your Personal / Organization Details</h2>
+    </div>
+    <p>
+      The first section of the form collects your contact and organization information.
+      This personalizes the report and determines where it is emailed.
+    </p>
+    <ol class="steps">
+      <li>Enter your <strong>Full Name</strong> (or the name of the responsible engineer).</li>
+      <li>Enter your <strong>Email Address</strong> — this is where the completed report will be delivered.</li>
+      <li>Enter your <strong>Phone Number</strong>.</li>
+      <li>Enter your <strong>Organization / Company</strong> name.</li>
+      <li>Double-check all fields and click <strong>"Next"</strong>.</li>
+    </ol>
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 3.1 — Insert screenshot here</div>
+        <span>Personal &amp; Organization Details form</span>
+      </div>
+      <div class="caption">Fig 3.1 – Personal &amp; Organization Details Form</div>
+    </div>
+  </div>
+
+  <!-- STEP 4 – Select Structure Type -->
+  <div class="section page-break" id="step4">
+    <div class="section-header">
+      <div class="step-badge">4</div>
+      <h2>Select the Structure Type</h2>
+    </div>
+    <p>
+      OSHMAES supports multiple structure types. The type you select determines which diagnostic
+      questions appear in the next steps.
+    </p>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">🏢</div>
+        <div class="card-title">RCC Frame Structure</div>
+        <div class="card-desc">Reinforced Cement Concrete framed buildings</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🧱</div>
+        <div class="card-title">Load-Bearing Masonry</div>
+        <div class="card-desc">Brick/stone masonry without frames</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔩</div>
+        <div class="card-title">Steel Structure</div>
+        <div class="card-desc">Steel-framed industrial or commercial buildings</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🏗️</div>
+        <div class="card-title">Composite Structure</div>
+        <div class="card-desc">Combination of steel and concrete elements</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🏛️</div>
+        <div class="card-title">Heritage Structure</div>
+        <div class="card-desc">Historic / heritage buildings</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🌉</div>
+        <div class="card-title">Bridge / Tunnel / Tower</div>
+        <div class="card-desc">Infrastructure structures</div>
+      </div>
+    </div>
+    <ol class="steps">
+      <li>Select the <strong>Structure Category</strong> (Building, Bridge, Tunnel, Tower, etc.).</li>
+      <li>For Buildings, also select the <strong>Structural System</strong> (RCC / Load-Bearing / Steel / Composite / Heritage).</li>
+      <li>Click <strong>"Next"</strong> to continue.</li>
+    </ol>
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 4.1 — Insert screenshot here</div>
+        <span>Structure Type selection screen with all options visible</span>
+      </div>
+      <div class="caption">Fig 4.1 – Structure Type Selection</div>
+    </div>
+    <div class="warning">
+      <strong>⚠️ Important</strong>
+      Once you proceed past this step, the structure type cannot be changed without starting a new assessment. Make sure you select the correct type before clicking "Next".
+    </div>
+  </div>
+
+  <!-- STEP 5 – Basic Structure Info -->
+  <div class="section page-break" id="step5">
+    <div class="section-header">
+      <div class="step-badge">5</div>
+      <h2>Fill in the Assessment Form</h2>
+    </div>
+    <p>
+      This section collects fundamental information about the structure. You will be asked
+      about the structure's name or location, its <strong>year of construction</strong>,
+      <strong>current usage / occupancy type</strong> and the <strong>environmental exposure
+      conditions</strong> it is subjected to (normal, coastal, industrial, etc.).
+    </p>
+    <ol class="steps">
+      <li>Fill in every field in this section as accurately as possible.</li>
+      <li>For drop-down fields, choose the option that best matches the structure's actual condition.</li>
+      <li>Click <strong>"Next"</strong> to move to the detailed diagnostic questions.</li>
+    </ol>
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 5.1 — Insert screenshot here</div>
+        <span>Basic Structure Information form section</span>
+      </div>
+      <div class="caption">Fig 5.1 – Basic Structure Information Form</div>
+    </div>
+    <div class="tip">
+      <strong>✅ Tip</strong>
+      If you do not know the exact year of construction, enter the approximate decade
+      (e.g., 1995). This still gives the AI meaningful data for its analysis.
+    </div>
+  </div>
+
+  <!-- STEP 6 – Structural Distress Questions -->
+  <div class="section page-break" id="step6">
+    <div class="section-header">
+      <div class="step-badge">6</div>
+      <h2>Answer Structural Distress Questions</h2>
+    </div>
+    <p>
+      This is the core diagnostic section of the assessment. The questions are automatically
+      tailored to the <strong>structure type</strong> you selected in Step 4. They ask about
+      visible signs of distress — such as cracks, moisture, corrosion, foundation settlement,
+      and past disaster exposure — observed in the structure.
+    </p>
+    <p>
+      For each question, select the severity level or condition that best matches what you have
+      physically observed. The accuracy of your answers directly influences the quality of the
+      AI-generated report.
+    </p>
+    <ol class="steps">
+      <li>Read each question and its options carefully.</li>
+      <li>Select the answer that most accurately reflects the current observed condition.</li>
+      <li>If you are unsure about a specific item, select the closest available option.</li>
+      <li>Answer all questions on this screen, then click <strong>"Next"</strong>.</li>
+    </ol>
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 6.1 — Insert screenshot here</div>
+        <span>Structural Distress Questions — first half of the section</span>
+      </div>
+      <div class="caption">Fig 6.1 – Structural Distress Questions (First Half)</div>
+    </div>
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 6.2 — Insert screenshot here</div>
+        <span>Structural Distress Questions — second half / bottom of the section</span>
+      </div>
+      <div class="caption">Fig 6.2 – Structural Distress Questions (Second Half)</div>
+    </div>
+    <div class="note">
+      <strong>📌 Note</strong>
+      The questions shown will differ based on structure type. For example, an RCC building
+      will show questions about concrete spalling and reinforcement corrosion, while a
+      Load-Bearing Masonry structure will show questions about wall cracks and mortar joints.
+    </div>
+  </div>
+
+  <!-- STEP 7 – Review & Confirm -->
+  <div class="section page-break" id="step7">
+    <div class="section-header">
+      <div class="step-badge">7</div>
+      <h2>Review &amp; Confirm Your Answers</h2>
+    </div>
+    <p>
+      Before you are taken to payment, OSHMAES shows a <strong>Summary Review</strong> page
+      where you can verify every answer you have entered. This is your last opportunity to
+      make corrections without starting over.
+    </p>
+    <ol class="steps">
+      <li>Read through the full summary of all your responses.</li>
+      <li>If anything needs to be changed, click the <strong>"Edit"</strong> button next to that section.</li>
+      <li>Once all answers are correct, click <strong>"Proceed to Payment"</strong>.</li>
+    </ol>
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 7.1 — Insert screenshot here</div>
+        <span>Assessment Review &amp; Summary page showing all answers</span>
+      </div>
+      <div class="caption">Fig 7.1 – Assessment Review &amp; Summary Page</div>
+    </div>
+    <div class="warning">
+      <strong>⚠️ Important</strong>
+      After proceeding to payment, your assessment responses are locked. Please review all answers carefully before clicking "Proceed to Payment".
+    </div>
+  </div>
+
+  <!-- STEP 8 – Payment -->
+  <div class="section page-break" id="step8">
+    <div class="section-header">
+      <div class="step-badge">8</div>
+      <h2>Complete Payment</h2>
+    </div>
+    <p>
+      OSHMAES requires a one-time payment per assessment. The payment is processed securely
+      through <strong>Razorpay</strong>. The amount is automatically determined based on
+      your location:
+    </p>
+    <table>
+      <thead>
+        <tr><th>Location</th><th>Currency</th><th>Amount</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>India</td><td>Indian Rupee (₹)</td><td>₹2</td></tr>
+        <tr><td>International</td><td>US Dollar ($)</td><td>$60</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Payment Flow Overview</h3>
+    <div class="pay-flow">
+      <div class="pay-step"><div class="ps-num">1</div><div class="ps-label">Payment page shown with amount</div></div>
+      <div class="pay-arrow">→</div>
+      <div class="pay-step"><div class="ps-num">2</div><div class="ps-label">Razorpay checkout opens</div></div>
+      <div class="pay-arrow">→</div>
+      <div class="pay-step"><div class="ps-num">3</div><div class="ps-label">Enter card / UPI / wallet details</div></div>
+      <div class="pay-arrow">→</div>
+      <div class="pay-step"><div class="ps-num">4</div><div class="ps-label">Payment verified &amp; confirmed</div></div>
+    </div>
+
+    <ol class="steps">
+      <li>You will see a payment summary screen displaying the assessment fee for your region.</li>
+      <li>Click <strong>"Proceed to Pay"</strong> — the Razorpay secure checkout window will open.</li>
+      <li>Choose your preferred payment method: <strong>Credit/Debit Card</strong>, <strong>UPI</strong>, <strong>Net Banking</strong>, or <strong>Wallet</strong>.</li>
+      <li>Enter your payment details and complete the transaction.</li>
+      <li>Once payment is successful, you will see a <strong>Payment Confirmed</strong> screen and OSHMAES will automatically begin generating your report.</li>
+    </ol>
+
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 8.1 — Insert screenshot here</div>
+        <span>Payment summary page showing the fee amount and "Proceed to Pay" button</span>
+      </div>
+      <div class="caption">Fig 8.1 – Payment Summary Page</div>
+    </div>
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 8.2 — Insert screenshot here</div>
+        <span>Razorpay checkout modal / gateway popup</span>
+      </div>
+      <div class="caption">Fig 8.2 – Razorpay Checkout Gateway</div>
+    </div>
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 8.3 — Insert screenshot here</div>
+        <span>Payment Success / Confirmation screen</span>
+      </div>
+      <div class="caption">Fig 8.3 – Payment Success Confirmation</div>
+    </div>
+
+    <div class="note">
+      <strong>📌 Note</strong>
+      Your payment is securely processed by Razorpay. OSHMAES does not store your card or
+      banking details. Each payment is valid for one assessment submission.
+    </div>
+    <div class="warning">
+      <strong>⚠️ Do not close the browser</strong>
+      After completing payment, do not close or refresh the browser tab. OSHMAES needs a
+      few seconds to verify the payment and begin report generation.
+    </div>
+  </div>
+
+  <!-- STEP 9 – View & Download Report -->
+  <div class="section page-break" id="step9">
+    <div class="section-header">
+      <div class="step-badge">9</div>
+      <h2>View &amp; Download Your Report</h2>
+    </div>
+    <p>
+      After payment is verified, OSHMAES automatically generates your structural health report.
+      This process takes approximately <strong>15–45 seconds</strong>.
+    </p>
+
+    <div class="callout">
+      <h4>⚙️ What OSHMAES does automatically after payment</h4>
+      <ul>
+        <li>Sends your assessment responses to the AI engine (Groq AI)</li>
+        <li>Generates a comprehensive <strong>4,000–5,000 word structural health report</strong></li>
+        <li>Creates a professionally formatted <strong>PDF report</strong></li>
+        <li>Stores the PDF securely in the cloud</li>
+        <li>Emails the PDF to your registered email address</li>
+      </ul>
+    </div>
+
+    <ol class="steps">
+      <li>Wait for the report generation screen to complete (a progress indicator will be shown).</li>
+      <li>Once ready, you will be taken to the <strong>Assessment Results</strong> page.</li>
+      <li>Click <strong>"View Report"</strong> to read the full report on screen.</li>
+      <li>Click <strong>"Download PDF"</strong> to save the report to your device.</li>
+      <li>Check your email inbox — a copy of the PDF has also been sent automatically.</li>
+    </ol>
+
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 9.1 — Insert screenshot here</div>
+        <span>Report generation / AI processing loading screen</span>
+      </div>
+      <div class="caption">Fig 9.1 – Report Generation Loading Screen</div>
+    </div>
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 9.2 — Insert screenshot here</div>
+        <span>Assessment Results page with "View Report" and "Download PDF" buttons</span>
+      </div>
+      <div class="caption">Fig 9.2 – Assessment Results Page</div>
+    </div>
+    <div class="screenshot-box">
+      <div class="img-area">
+        <div class="icon">🖼️</div>
+        <div class="fig-label">Fig 9.3 — Insert screenshot here</div>
+        <span>First page of the generated PDF report</span>
+      </div>
+      <div class="caption">Fig 9.3 – Sample Generated PDF Report (First Page)</div>
+    </div>
+
+    <h3>What is Included in the Report?</h3>
+    <table>
+      <thead><tr><th>Report Section</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Executive Summary</td><td>Overall structural health rating and key findings</td></tr>
+        <tr><td>Structural Assessment</td><td>Detailed analysis of each distress symptom</td></tr>
+        <tr><td>Risk Evaluation</td><td>Safety risk rating and priority areas of concern</td></tr>
+        <tr><td>Recommendations</td><td>Actionable repair and maintenance recommendations</td></tr>
+        <tr><td>Technical Analysis</td><td>In-depth observations per structural element</td></tr>
+        <tr><td>Conclusion</td><td>Summary statement on the structure's overall condition</td></tr>
+      </tbody>
+    </table>
+    <div class="tip">
+      <strong>✅ Tip</strong>
+      You can access all past assessment reports at any time from <strong>My Assessments</strong> on your dashboard.
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="section page-break" id="faq">
+    <div class="section-header">
+      <div class="step-badge" style="font-size:18px;">?</div>
+      <h2>Frequently Asked Questions (FAQ)</h2>
+    </div>
+
+    <h3>Can I save my assessment midway and continue later?</h3>
+    <p>Yes. OSHMAES auto-saves your progress. Return to it via <strong>My Assessments → Drafts</strong> on the dashboard.</p>
+
+    <h3>What if I selected the wrong structure type?</h3>
+    <p>Use the <strong>"Back"</strong> button before submission to correct it. After payment and submission you will need to start a new assessment.</p>
+
+    <h3>My payment was deducted but I did not receive the report. What do I do?</h3>
+    <p>Do not pay again. Go to <strong>My Assessments</strong> on the dashboard — your assessment will be listed there. If the report is still not generated, contact your system administrator with your payment ID.</p>
+
+    <h3>I did not receive the report email.</h3>
+    <p>Check your spam/junk folder. If not found, go to the Assessment Results page and click <strong>"Resend Email"</strong>. You can also download the PDF directly from the results page.</p>
+
+    <h3>How accurate is the AI-generated report?</h3>
+    <p>The report is generated using advanced AI trained on structural engineering knowledge and provides expert-level observations. It should be treated as a <strong>preliminary assessment tool</strong> and verified by a qualified structural engineer for critical decisions.</p>
+
+    <h3>Can I do an advanced assessment after completing a basic one?</h3>
+    <p>Yes. Once your Basic Assessment is complete, you can initiate an <strong>Advanced Assessment</strong> from the Assessment Results page for a deeper in-depth analysis.</p>
+
+    <h3>Is my data secure?</h3>
+    <p>All data is encrypted. PDF reports are stored on secured cloud infrastructure accessible only through your account.</p>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p><strong>OSHMAES</strong> — AI-Powered Online Structural Health Monitoring and Assessment Expert System</p>
+    <p style="margin-top:6px;">User Guide v1.0 &nbsp;|&nbsp; For support, contact your system administrator</p>
+    <p style="margin-top:6px; color:#b0bec5;">© 2026 OSHMAES. All rights reserved.</p>
+  </div>
+
+</div><!-- /content -->
+</body>
+</html>

@@ -7,10 +7,30 @@ const Payment = require('../models/Payment');
 const User = require('../models/User');
 const router = express.Router();
 
-// Currency pricing map (in smallest units)
+// Currency pricing map by assessment level (in smallest units)
 const CURRENCY_PRICING = {
-  INR: 2500,  // ₹25 (in paise)
-  USD: 500     // $5 (in cents)
+  basic: {
+    INR: 100,   // ₹1 (in paise)
+    USD: 3000   // $30 (in cents)
+  },
+  advanced: {
+    INR: 200,   // ₹2 (in paise)
+    USD: 6000   // $60 (in cents)
+  }
+};
+
+const normalizeAssessmentLevel = (value) => {
+  return String(value || 'basic').toLowerCase() === 'advanced' ? 'advanced' : 'basic';
+};
+
+const getDisplayAmount = (currency, amount) => {
+  if (currency === 'INR') {
+    return `₹${amount / 100}`;
+  }
+  if (currency === 'USD') {
+    return `$${(amount / 100).toFixed(0)}`;
+  }
+  return `${amount} ${currency}`;
 };
 
 // Helper: extract IP from request (handles proxies)
@@ -104,7 +124,7 @@ function getCurrencyForUser(user, req) {
       const currency = (detectedCountry === 'India') ? 'INR' : 'USD';
       console.log('  ✅ FINAL DECISION: Currency from IP:', currency);
       console.log('  📍 Country:', detectedCountry);
-      console.log('  💵 Amount:', currency === 'INR' ? '₹25 (2500 paise)' : '$5 (500 cents)');
+      console.log('  💵 Amount:', currency === 'INR' ? '₹2 (200 paise)' : '$60 (6000 cents)');
       return currency;
     }
   }
@@ -157,6 +177,9 @@ const authenticateToken = (req, res, next) => {
 // Create Razorpay Order
 router.post('/create-order', authenticateToken, async (req, res) => {
   try {
+    const { assessmentId, assessmentLevel } = req.body;
+    const level = normalizeAssessmentLevel(assessmentLevel || (assessmentId ? 'advanced' : 'basic'));
+
     // Fetch user details to determine currency
     const user = await User.findById(req.user.userId);
     if (!user) {
@@ -168,30 +191,35 @@ router.post('/create-order', authenticateToken, async (req, res) => {
     
     // Determine currency and amount based on IP + user's country
     const currency = getCurrencyForUser(user, req);
-    const amount = CURRENCY_PRICING[currency];
+    const amount = CURRENCY_PRICING[level][currency];
+    const displayAmount = getDisplayAmount(currency, amount);
     
     console.log('\n📦 ORDER SUMMARY:');
     console.log('  User:', user.email);
+    console.log('  Assessment ID:', assessmentId || 'N/A');
+    console.log('  Level:', level);
     console.log('  Currency:', currency);
-    console.log('  Amount:', amount, currency === 'INR' ? '(₹25)' : '($5)');
-    console.log('  Display:', currency === 'INR' ? '₹25' : '$5');
+    console.log('  Amount:', amount, `(${displayAmount})`);
+    console.log('  Display:', displayAmount);
     console.log('=' .repeat(60) + '\n');
     
     const options = {
-      amount: amount, // amount in smallest unit (paise/cents)
+      amount: amount,
       currency: currency,
       receipt: `receipt_${Date.now()}`,
       notes: {
         userId: req.user.userId,
         userEmail: req.user.email,
-        country: user.country || 'India'
+        country: user.country || 'India',
+        assessmentLevel: level,
+        assessmentId: assessmentId || ''
       }
     };
     
     const order = await razorpay.orders.create(options);
     
-    // Save payment record in database
-    const payment = new Payment({
+    // Save payment record in database — bind to specific assessment
+    const paymentData = {
       userId: new mongoose.Types.ObjectId(req.user.userId),
       userEmail: req.user.email,
       razorpayOrderId: order.id,
@@ -199,9 +227,14 @@ router.post('/create-order', authenticateToken, async (req, res) => {
       currency: currency,
       status: 'created',
       metadata: {
-        country: user.country || 'India'
+        country: user.country || 'India',
+        assessmentLevel: level
       }
-    });
+    };
+    if (assessmentId) {
+      paymentData.assessmentId = new mongoose.Types.ObjectId(assessmentId);
+    }
+    const payment = new Payment(paymentData);
     
     await payment.save();
     
@@ -210,7 +243,8 @@ router.post('/create-order', authenticateToken, async (req, res) => {
       orderId: order.id,
       amount: amount,
       currency: currency,
-      displayAmount: currency === 'INR' ? '₹25' : '$5',
+      displayAmount: displayAmount,
+      assessmentLevel: level,
       keyId: process.env.RAZORPAY_KEY_ID
     });
     
@@ -306,6 +340,7 @@ router.post('/verify-payment', authenticateToken, async (req, res) => {
 // Get currency and pricing info (without creating order)
 router.get('/currency-info', authenticateToken, async (req, res) => {
   try {
+    const level = normalizeAssessmentLevel(req.query.assessmentLevel);
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({
@@ -315,13 +350,15 @@ router.get('/currency-info', authenticateToken, async (req, res) => {
     }
     
     const currency = getCurrencyForUser(user, req);
-    const amount = CURRENCY_PRICING[currency];
+    const amount = CURRENCY_PRICING[level][currency];
+    const displayAmount = getDisplayAmount(currency, amount);
     
     res.json({
       success: true,
+      assessmentLevel: level,
       currency: currency,
       amount: amount,
-      displayAmount: currency === 'INR' ? '₹25' : '$5'
+      displayAmount: displayAmount
     });
     
   } catch (error) {
@@ -334,14 +371,23 @@ router.get('/currency-info', authenticateToken, async (req, res) => {
   }
 });
 
-// Check if user has available payment (success + not used)
+// Check if user has available payment for a specific assessment
 router.get('/check-available', authenticateToken, async (req, res) => {
   try {
-    const availablePayment = await Payment.findOne({
+    const { assessmentId } = req.query;
+
+    let query = {
       userId: new mongoose.Types.ObjectId(req.user.userId),
       status: 'success',
       assessmentUsed: false
-    }).sort({ paidAt: -1 });
+    };
+
+    // If assessmentId provided, check payment specifically for that assessment
+    if (assessmentId) {
+      query.assessmentId = new mongoose.Types.ObjectId(assessmentId);
+    }
+
+    const availablePayment = await Payment.findOne(query).sort({ paidAt: -1 });
     
     res.json({
       success: true,

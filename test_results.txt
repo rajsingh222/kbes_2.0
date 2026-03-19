@@ -1,0 +1,109 @@
+﻿[1m
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ[0m
+[1m  OSHAS ΓÇö Basic Questionnaire Deep DB Verify[0m
+[1m  API: http://localhost:5000[0m
+[1mΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ[0m
+  [32mΓ£ö[0m Server reachable ΓÇö DB: connected
+
+[1m[33mΓû╢ 1. RCC Structure[0m[0m
+  [36mΓä╣[0m Sending 61 response keys ΓåÆ POST /api/save-assessment
+  [32mΓ£ö[0m Saved ΓåÆ ID: 69ba51f53e71e8ea0af61205
+  [32mΓ£ö[0m Fetched from DB successfully
+  [32mΓ£ö[0m assessmentType = "Building" Γ£ô
+
+  [1mΓÇö userDetails ΓÇö[0m
+  [36mΓä╣[0m userDetails: 8/8 fields verified
+  [32mΓ£ö[0m All 8 userDetails fields saved correctly
+
+  [1mΓÇö responses (flat key store) ΓÇö[0m
+  [36mΓä╣[0m responses: 61/61 fields verified
+  [32mΓ£ö[0m All 61 fields saved correctly
+
+  [1mΓÇö assessmentResponses.raw_responses ΓÇö[0m
+  [36mΓä╣[0m assessmentResponses: 61/61 fields verified
+  [32mΓ£ö[0m All 61 fields saved correctly
+
+[1m[33mΓû╢ 2. Steel Structure[0m[0m
+  [36mΓä╣[0m Sending 61 response keys ΓåÆ POST /api/save-assessment
+  [32mΓ£ö[0m Saved ΓåÆ ID: 69ba51f53e71e8ea0af61208
+  [32mΓ£ö[0m Fetched from DB successfully
+  [32mΓ£ö[0m assessmentType = "Building" Γ£ô
+
+  [1mΓÇö userDetails ΓÇö[0m
+  [36mΓä╣[0m userDetails: 8/8 fields verified
+  [32mΓ£ö[0m All 8 userDetails fields saved correctly
+
+  [1mΓÇö responses (flat key store) ΓÇö[0m
+  [36mΓä╣[0m responses: 61/61 fields verified
+  [32mΓ£ö[0m All 61 fields saved correctly
+
+  [1mΓÇö assessmentResponses.raw_responses ΓÇö[0m
+  [36mΓä╣[0m assessmentResponses: 61/61 fields verified
+  [32mΓ£ö[0m All 61 fields saved correctly
+
+[1m[33mΓû╢ 3. Composite Structure (RCC+Steel)[0m[0m
+  [36mΓä╣[0m Sending 70 response keys ΓåÆ POST /api/save-assessment
+  [32mΓ£ö[0m Saved ΓåÆ ID: 69ba51f53e71e8ea0af6120b
+  [32mΓ£ö[0m Fetched from DB successfully
+  [32mΓ£ö[0m assessmentType = "Building" Γ£ô
+
+  [1mΓÇö userDetails ΓÇö[0m
+  [36mΓä╣[0m userDetails: 8/8 fields verified
+  [32mΓ£ö[0m All 8 userDetails fields saved correctly
+
+  [1mΓÇö responses (flat key store) ΓÇö[0m
+  [36mΓä╣[0m responses: 70/70 fields verified
+  [32mΓ£ö[0m All 70 fields saved correctly
+
+  [1mΓÇö assessmentResponses.raw_responses ΓÇö[0m
+  [36mΓä╣[0m assessmentResponses: 70/70 fields verified
+  [32mΓ£ö[0m All 70 fields saved correctly
+
+[1m[33mΓû╢ 4. Heritage Structure[0m[0m
+  [36mΓä╣[0m Sending 57 response keys ΓåÆ POST /api/save-assessment
+  [32mΓ£ö[0m Saved ΓåÆ ID: 69ba51f53e71e8ea0af6120e
+  [32mΓ£ö[0m Fetched from DB successfully
+  [32mΓ£ö[0m assessmentType = "Building" Γ£ô
+
+  [1mΓÇö userDetails ΓÇö[0m
+  [36mΓä╣[0m userDetails: 8/8 fields verified
+  [32mΓ£ö[0m All 8 userDetails fields saved correctly
+
+  [1mΓÇö responses (flat key store) ΓÇö[0m
+  [36mΓä╣[0m responses: 57/57 fields verified
+  [32mΓ£ö[0m All 57 fields saved correctly
+
+  [1mΓÇö assessmentResponses.raw_responses ΓÇö[0m
+  [36mΓä╣[0m assessmentResponses: 57/57 fields verified
+  [32mΓ£ö[0m All 57 fields saved correctly
+
+[1m[33mΓû╢ 5. Load Bearing Masonry[0m[0m
+  [36mΓä╣[0m Sending 65 response keys ΓåÆ POST /api/save-assessment
+  [32mΓ£ö[0m Saved ΓåÆ ID: 69ba51f53e71e8ea0af61211
+  [32mΓ£ö[0m Fetched from DB successfully
+  [32mΓ£ö[0m assessmentType = "Building" Γ£ô
+
+  [1mΓÇö userDetails ΓÇö[0m
+  [36mΓä╣[0m userDetails: 8/8 fields verified
+  [32mΓ£ö[0m All 8 userDetails fields saved correctly
+
+  [1mΓÇö responses (flat key store) ΓÇö[0m
+  [36mΓä╣[0m responses: 65/65 fields verified
+  [32mΓ£ö[0m All 65 fields saved correctly
+
+  [1mΓÇö assessmentResponses.raw_responses ΓÇö[0m
+  [36mΓä╣[0m assessmentResponses: 65/65 fields verified
+  [32mΓ£ö[0m All 65 fields saved correctly
+
+[1m[33mΓû╢ FINAL SUMMARY[0m[0m
+
+  [1mStructure Type  Status  Fields Sent  Fields Saved  Missing  Mismatch[0m
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  1. RCC Structure  [32mPASS[0m    61  61  0  0
+  2. Steel Structure  [32mPASS[0m    61  61  0  0
+  3. Composite Structure (RCC+Steel)  [32mPASS[0m    70  70  0  0
+  4. Heritage Structure  [32mPASS[0m    57  57  0  0
+  5. Load Bearing Masonry  [32mPASS[0m    65  65  0  0
+
+[32m[1m  Γ£ö  All 5 structure types ΓÇö every field saved correctly to MongoDB![0m[0m
+

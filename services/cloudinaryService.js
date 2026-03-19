@@ -39,6 +39,39 @@ function uploadPdfBuffer(buffer, publicId, folder) {
   });
 }
 
+/**
+ * Upload an image buffer (from multer memoryStorage) to Cloudinary.
+ * Returns the full Cloudinary upload result (result.secure_url is the CDN URL).
+ */
+function uploadImageBuffer(buffer, originalname, folder) {
+  return new Promise((resolve, reject) => {
+    const ext = (originalname || 'photo').split('.').pop().toLowerCase() || 'jpg';
+    const safeName = (originalname || `img_${Date.now()}`).replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const targetFolder = folder || process.env.CLOUDINARY_FOLDER || 'assessments';
+    const options = {
+      resource_type: 'image',
+      public_id: `${safeName}_${Date.now()}`,
+      overwrite: false,
+      folder: `${targetFolder}/images`,
+      format: ext,
+      quality: 'auto:good',
+      fetch_format: 'auto',
+    };
+
+    const uploadStream = cloudinary.uploader.upload_stream(options, (error, result) => {
+      if (error) return reject(error);
+      resolve(result);
+    });
+
+    try {
+      uploadStream.end(buffer);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
 module.exports = {
-  uploadPdfBuffer
+  uploadPdfBuffer,
+  uploadImageBuffer,
 };

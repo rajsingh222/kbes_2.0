@@ -56,7 +56,7 @@ const paymentSchema = new mongoose.Schema({
   },
   assessmentType: {
     type: String,
-    enum: ['Building', 'Load Bearing', 'Tunnel', 'Bridge', null],
+    enum: ['Building', 'Load Bearing', 'Bridge', 'Tunnel', 'Tower', 'Other', null],
     default: null
   },
   usedAt: {

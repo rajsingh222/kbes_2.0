@@ -374,13 +374,26 @@ router.get('/currency-info', authenticateToken, async (req, res) => {
 // Check if user has available payment for a specific assessment
 router.get('/check-available', authenticateToken, async (req, res) => {
   try {
-    const { assessmentId } = req.query;
+    const { assessmentId, assessmentLevel } = req.query;
+    const level = assessmentLevel ? normalizeAssessmentLevel(assessmentLevel) : null;
 
     let query = {
       userId: new mongoose.Types.ObjectId(req.user.userId),
       status: 'success',
       assessmentUsed: false
     };
+
+    // Optional level filter: allows callers to enforce per-level payment usage.
+    if (level) {
+      if (level === 'basic') {
+        query.$or = [
+          { 'metadata.assessmentLevel': 'basic' },
+          { 'metadata.assessmentLevel': { $exists: false } }
+        ];
+      } else {
+        query['metadata.assessmentLevel'] = level;
+      }
+    }
 
     // If assessmentId provided, check payment specifically for that assessment
     if (assessmentId) {
@@ -435,14 +448,28 @@ router.get('/history', authenticateToken, async (req, res) => {
 // Mark payment as used (called after assessment submission)
 router.post('/mark-used', authenticateToken, async (req, res) => {
   try {
-    const { assessmentId, assessmentType } = req.body;
+    const { assessmentId, assessmentType, assessmentLevel } = req.body;
+    const level = assessmentLevel ? normalizeAssessmentLevel(assessmentLevel) : null;
     
     // Find the most recent available payment for this user
-    const payment = await Payment.findOne({
+    const query = {
       userId: new mongoose.Types.ObjectId(req.user.userId),
       status: 'success',
       assessmentUsed: false
-    }).sort({ paidAt: -1 });
+    };
+
+    if (level) {
+      if (level === 'basic') {
+        query.$or = [
+          { 'metadata.assessmentLevel': 'basic' },
+          { 'metadata.assessmentLevel': { $exists: false } }
+        ];
+      } else {
+        query['metadata.assessmentLevel'] = level;
+      }
+    }
+
+    const payment = await Payment.findOne(query).sort({ paidAt: -1 });
     
     if (!payment) {
       return res.status(404).json({

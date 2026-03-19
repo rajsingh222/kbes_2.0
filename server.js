@@ -3062,6 +3062,30 @@ app.post('/api/assessment/:id/advanced', authenticateToken, async (req, res) => 
     baseAssessment.markModified('advancedResponses');
     await baseAssessment.save();
 
+    // Consume an unused advanced payment bound to this base assessment.
+    // This enforces one advanced payment per assessment submission.
+    try {
+      const advancedPayment = await Payment.findOne({
+        userId: new mongoose.Types.ObjectId(req.user.userId),
+        assessmentId: new mongoose.Types.ObjectId(id),
+        status: 'success',
+        assessmentUsed: false,
+        $or: [
+          { 'metadata.assessmentLevel': 'advanced' },
+          { 'metadata.assessmentLevel': { $exists: false } }
+        ]
+      }).sort({ paidAt: -1 });
+
+      if (advancedPayment) {
+        await advancedPayment.markAsUsed(id, assessmentType || 'Building');
+        console.log(`✅ Advanced payment consumed for assessment ${id}: ${advancedPayment._id}`);
+      } else {
+        console.warn(`⚠️ No unused advanced payment found to consume for assessment ${id}`);
+      }
+    } catch (paymentConsumeError) {
+      console.error('⚠️ Failed to consume advanced payment (non-fatal):', paymentConsumeError.message || paymentConsumeError);
+    }
+
     // ── Auto-create / update FinalAssessment (both basic + advanced now complete) ─
     try {
       await FinalAssessment.findOneAndUpdate(

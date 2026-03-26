@@ -11,9 +11,9 @@ const { Readable } = require('stream');
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const JWT_EXPIRES_IN = '7d';
 
-// Admin credentials
-const ADMIN_EMAIL = 'admin@spplindia.org';
-const ADMIN_PASSWORD = '@Admin1234554321';
+// Admin credentials (set via environment in production)
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@spplindia.org';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '@Admin1234554321';
 
 // Admin authentication middleware
 const verifyAdmin = (req, res, next) => {
@@ -181,22 +181,23 @@ router.get('/assessments/:id', verifyAdmin, async (req, res) => {
       });
     }
 
-    // Use the 'responses' field for raw responses, or fall back to assessmentResponses
-    const rawResponses = assessment.responses || assessment.assessmentResponses || {};
-    
-    // Filter out empty responses from raw responses
-    const filteredResponses = {};
-    Object.entries(rawResponses).forEach(([key, value]) => {
-      if (value !== null && value !== undefined && value !== '' && value !== 'N/A') {
-        filteredResponses[key] = value;
-      }
-    });
+    // Merge all known response sources so admin can see complete submitted data.
+    const basicResponses = (assessment.assessmentResponses && assessment.assessmentResponses.raw_responses)
+      ? assessment.assessmentResponses.raw_responses
+      : (assessment.assessmentResponses || {});
+    const flatResponses = assessment.responses || {};
+    const advancedResponses = assessment.advancedResponses || {};
+    const mergedResponses = {
+      ...basicResponses,
+      ...flatResponses,
+      ...advancedResponses
+    };
 
     res.json({
       success: true,
       assessment: {
         ...assessment,
-        rawResponses: filteredResponses
+        rawResponses: mergedResponses
       }
     });
 
@@ -422,6 +423,53 @@ router.post('/assessments/:id/upload-report-file', verifyAdmin, upload.single('f
   } catch (error) {
     console.error('Upload report file error:', error);
     res.status(500).json({ success: false, message: 'Error uploading report file', error: error.message });
+  }
+});
+
+/**
+ * GET /api/admin/assessments/:id/admin-report-file
+ * Stream uploaded admin report file (GridFS) to authenticated admin.
+ * If report is cloud-hosted, redirect to that URL.
+ */
+router.get('/assessments/:id/admin-report-file', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const assessment = await Assessment.findById(id).lean();
+
+    if (!assessment) {
+      return res.status(404).json({ success: false, message: 'Assessment not found' });
+    }
+
+    const adminReport = assessment.adminReport || {};
+
+    if (adminReport.cloudinaryUrl) {
+      return res.redirect(adminReport.cloudinaryUrl);
+    }
+
+    const fileId = adminReport.gridFsFileId || adminReport.fileId;
+    if (!fileId) {
+      return res.status(404).json({ success: false, message: 'No uploaded admin report found' });
+    }
+
+    const { GridFSBucket } = require('mongodb');
+    const gridFSBucket = new GridFSBucket(mongoose.connection.db, {
+      bucketName: 'adminReports'
+    });
+
+    const objectId = typeof fileId === 'string' ? new mongoose.Types.ObjectId(fileId) : fileId;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="admin_report_${id}.pdf"`);
+
+    const stream = gridFSBucket.openDownloadStream(objectId);
+    stream.on('error', () => {
+      if (!res.headersSent) {
+        res.status(404).json({ success: false, message: 'Report file not found in storage' });
+      }
+    });
+    stream.pipe(res);
+  } catch (error) {
+    console.error('Get admin report file error:', error);
+    res.status(500).json({ success: false, message: 'Error fetching admin report file', error: error.message });
   }
 });
 

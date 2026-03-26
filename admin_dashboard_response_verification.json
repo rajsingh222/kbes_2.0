@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-03-23T06:24:46.023Z",
+  "checked": 6,
+  "allPass": true,
+  "results": [
+    {
+      "label": "RCC Structure",
+      "id": "69c0dc0b43fe1d0e9514035b",
+      "expectedKeyCount": 61,
+      "adminKeyCount": 61,
+      "missingCount": 0,
+      "mismatchCount": 0,
+      "allGood": true,
+      "missingSample": [],
+      "mismatchSample": []
+    },
+    {
+      "label": "Steel Structure",
+      "id": "69c0dc0b43fe1d0e9514035e",
+      "expectedKeyCount": 61,
+      "adminKeyCount": 61,
+      "missingCount": 0,
+      "mismatchCount": 0,
+      "allGood": true,
+      "missingSample": [],
+      "mismatchSample": []
+    },
+    {
+      "label": "Composite Structure (RCC+Steel)",
+      "id": "69c0dc0b43fe1d0e95140361",
+      "expectedKeyCount": 70,
+      "adminKeyCount": 70,
+      "missingCount": 0,
+      "mismatchCount": 0,
+      "allGood": true,
+      "missingSample": [],
+      "mismatchSample": []
+    },
+    {
+      "label": "Heritage Structure",
+      "id": "69c0dc0b43fe1d0e95140364",
+      "expectedKeyCount": 57,
+      "adminKeyCount": 57,
+      "missingCount": 0,
+      "mismatchCount": 0,
+      "allGood": true,
+      "missingSample": [],
+      "mismatchSample": []
+    },
+    {
+      "label": "Load Bearing Masonry",
+      "id": "69c0dc0b43fe1d0e95140367",
+      "expectedKeyCount": 65,
+      "adminKeyCount": 65,
+      "missingCount": 0,
+      "mismatchCount": 0,
+      "allGood": true,
+      "missingSample": [],
+      "mismatchSample": []
+    },
+    {
+      "label": "Advanced RCC Snapshot",
+      "id": "69c0dabaa0893020d5c84473",
+      "expectedKeyCount": 293,
+      "adminKeyCount": 293,
+      "missingCount": 0,
+      "mismatchCount": 0,
+      "allGood": true,
+      "missingSample": [],
+      "mismatchSample": []
+    }
+  ]
+}

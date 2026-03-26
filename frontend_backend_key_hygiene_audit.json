@@ -1,0 +1,152 @@
+{
+  "generatedAt": "2026-03-23T06:32:50.928Z",
+  "api": "http://localhost:5000",
+  "user": {
+    "email": "frontend_backend_keys_1774247568288@osham.test",
+    "userId": "69c0de90daf42cb2694fd4e8"
+  },
+  "summary": {
+    "checks": 10,
+    "passed": 10,
+    "failed": 0
+  },
+  "basic": [
+    {
+      "label": "RCC Basic",
+      "assessmentId": "69c0de90daf42cb2694fd4ec",
+      "expectedCount": 61,
+      "rawCount": 61,
+      "flatCount": 61,
+      "rawMissingCount": 0,
+      "rawExtraCount": 0,
+      "flatMissingCount": 0,
+      "flatExtraCount": 0,
+      "rawMissingSample": [],
+      "rawExtraSample": [],
+      "flatMissingSample": [],
+      "flatExtraSample": [],
+      "allGood": true
+    },
+    {
+      "label": "Steel Basic",
+      "assessmentId": "69c0de90daf42cb2694fd4ef",
+      "expectedCount": 61,
+      "rawCount": 61,
+      "flatCount": 61,
+      "rawMissingCount": 0,
+      "rawExtraCount": 0,
+      "flatMissingCount": 0,
+      "flatExtraCount": 0,
+      "rawMissingSample": [],
+      "rawExtraSample": [],
+      "flatMissingSample": [],
+      "flatExtraSample": [],
+      "allGood": true
+    },
+    {
+      "label": "Composite Basic",
+      "assessmentId": "69c0de90daf42cb2694fd4f2",
+      "expectedCount": 70,
+      "rawCount": 70,
+      "flatCount": 70,
+      "rawMissingCount": 0,
+      "rawExtraCount": 0,
+      "flatMissingCount": 0,
+      "flatExtraCount": 0,
+      "rawMissingSample": [],
+      "rawExtraSample": [],
+      "flatMissingSample": [],
+      "flatExtraSample": [],
+      "allGood": true
+    },
+    {
+      "label": "Heritage Basic",
+      "assessmentId": "69c0de90daf42cb2694fd4f5",
+      "expectedCount": 57,
+      "rawCount": 57,
+      "flatCount": 57,
+      "rawMissingCount": 0,
+      "rawExtraCount": 0,
+      "flatMissingCount": 0,
+      "flatExtraCount": 0,
+      "rawMissingSample": [],
+      "rawExtraSample": [],
+      "flatMissingSample": [],
+      "flatExtraSample": [],
+      "allGood": true
+    },
+    {
+      "label": "Load Bearing Basic",
+      "assessmentId": "69c0de91daf42cb2694fd4f8",
+      "expectedCount": 65,
+      "rawCount": 65,
+      "flatCount": 65,
+      "rawMissingCount": 0,
+      "rawExtraCount": 0,
+      "flatMissingCount": 0,
+      "flatExtraCount": 0,
+      "rawMissingSample": [],
+      "rawExtraSample": [],
+      "flatMissingSample": [],
+      "flatExtraSample": [],
+      "allGood": true
+    }
+  ],
+  "advanced": [
+    {
+      "label": "Advanced RCC",
+      "assessmentId": "69c0de91daf42cb2694fd4fb",
+      "expectedCount": 288,
+      "savedCount": 288,
+      "missingCount": 0,
+      "extraCount": 0,
+      "missingSample": [],
+      "extraSample": [],
+      "allGood": true
+    },
+    {
+      "label": "Advanced Steel",
+      "assessmentId": "69c0de91daf42cb2694fd506",
+      "expectedCount": 60,
+      "savedCount": 60,
+      "missingCount": 0,
+      "extraCount": 0,
+      "missingSample": [],
+      "extraSample": [],
+      "allGood": true
+    },
+    {
+      "label": "Advanced Composite",
+      "assessmentId": "69c0de91daf42cb2694fd511",
+      "expectedCount": 41,
+      "savedCount": 41,
+      "missingCount": 0,
+      "extraCount": 0,
+      "missingSample": [],
+      "extraSample": [],
+      "allGood": true
+    },
+    {
+      "label": "Advanced Load Bearing",
+      "assessmentId": "69c0de92daf42cb2694fd51d",
+      "expectedCount": 65,
+      "savedCount": 65,
+      "missingCount": 0,
+      "extraCount": 0,
+      "missingSample": [],
+      "extraSample": [],
+      "allGood": true
+    },
+    {
+      "label": "Advanced Heritage",
+      "assessmentId": "69c0de92daf42cb2694fd529",
+      "expectedCount": 163,
+      "savedCount": 163,
+      "missingCount": 0,
+      "extraCount": 0,
+      "missingSample": [],
+      "extraSample": [],
+      "allGood": true
+    }
+  ]
+}

@@ -10,11 +10,11 @@ const router = express.Router();
 // Currency pricing map by assessment level (in smallest units)
 const CURRENCY_PRICING = {
   basic: {
-    INR: 100,   // ₹1 (in paise)
+    INR: 50000, // ₹500 (in paise)
     USD: 3000   // $30 (in cents)
   },
   advanced: {
-    INR: 200,   // ₹2 (in paise)
+    INR: 250000, // ₹2500 (in paise)
     USD: 6000   // $60 (in cents)
   }
 };
@@ -124,7 +124,7 @@ function getCurrencyForUser(user, req) {
       const currency = (detectedCountry === 'India') ? 'INR' : 'USD';
       console.log('  ✅ FINAL DECISION: Currency from IP:', currency);
       console.log('  📍 Country:', detectedCountry);
-      console.log('  💵 Amount:', currency === 'INR' ? '₹2 (200 paise)' : '$60 (6000 cents)');
+      console.log('  💵 Amount:', currency === 'INR' ? '₹2500 (250000 paise)' : '$60 (6000 cents)');
       return currency;
     }
   }

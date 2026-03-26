@@ -1,0 +1,5283 @@
+{
+  "generatedAt": "2026-03-23T06:22:04.053Z",
+  "apiUrl": "http://localhost:5000",
+  "summary": {
+    "totalCases": 5,
+    "passedCases": 5,
+    "failedCases": 0,
+    "totalFields": 314,
+    "passedFields": 314
+  },
+  "cases": [
+    {
+      "label": "RCC Structure",
+      "assessmentId": "69c0dc0b43fe1d0e9514035b",
+      "totalFields": 61,
+      "passedFields": 61,
+      "allPass": true,
+      "failedFieldKeys": [],
+      "fields": [
+        {
+          "key": "q10_ground_issues_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q10_soil_type",
+          "expected": "Alluvial",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Alluvial"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Alluvial"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q10_soil_type_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11_vibration_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q12_disaster_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q12_disaster_types",
+          "expected": [
+            "Earthquake"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Earthquake"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Earthquake"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q12_disaster_types_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q12_earthquake_intensity",
+          "expected": "Moderate",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Moderate"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Moderate"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q13_rcc_expert_intervention_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q13_rcc_expert_intervention_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q13_rcc_expert_intervention_types",
+          "expected": [
+            "Crack injection",
+            "Waterproofing"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Crack injection",
+              "Waterproofing"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Crack injection",
+              "Waterproofing"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q13_rcc_subscribe_details",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_age",
+          "expected": "25",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "25"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "25"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_ageRange",
+          "expected": "21-30 years",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "21-30 years"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "21-30 years"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_city",
+          "expected": "Mumbai",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Mumbai"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Mumbai"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_city_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_country",
+          "expected": "India",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "India"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "India"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_country_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_state",
+          "expected": "Maharashtra",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Maharashtra"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Maharashtra"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_state_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_storeys_above",
+          "expected": "5",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "5"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "5"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_storeys_below",
+          "expected": "1",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "1"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "1"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q2_usage",
+          "expected": "Residential",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Residential"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Residential"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q2_usage_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q3_exposure_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q3_exposure_type",
+          "expected": "Urban",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Urban"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Urban"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_floors_added",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_floors_added_after",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_floors_details",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_heavy_machinery",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q5_structural_system",
+          "expected": "RCC Structure",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "RCC Structure"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "RCC Structure"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_beam_locations",
+          "expected": [
+            "Near supports",
+            "Mid-span"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Near supports",
+              "Mid-span"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Near supports",
+              "Mid-span"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_beam_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_beam_orientations",
+          "expected": [
+            "Diagonal",
+            "Vertical"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Diagonal",
+              "Vertical"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Diagonal",
+              "Vertical"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_beam_orientations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_column_locations",
+          "expected": [
+            "Base",
+            "Top"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Base",
+              "Top"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Base",
+              "Top"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_column_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_column_orientations",
+          "expected": [
+            "Horizontal",
+            "Diagonal"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Horizontal",
+              "Diagonal"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Horizontal",
+              "Diagonal"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_column_orientations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_crack_elements",
+          "expected": [
+            "Beams",
+            "Columns"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Beams",
+              "Columns"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Beams",
+              "Columns"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_crack_elements_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_cracks_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_rcc_widths",
+          "expected": [
+            "0.1–0.3 mm (Fine)"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "0.1–0.3 mm (Fine)"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "0.1–0.3 mm (Fine)"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_rcc_widths_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_exposed_steel_elements",
+          "expected": [
+            "Beams"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Beams"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Beams"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_exposed_steel_elements_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_exposed_steel_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_spalling_elements",
+          "expected": [
+            "Beams",
+            "Slab"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Beams",
+              "Slab"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Beams",
+              "Slab"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_spalling_elements_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_spalling_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_spalling_locations",
+          "expected": [
+            "Corner",
+            "Soffit"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Corner",
+              "Soffit"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Corner",
+              "Soffit"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_spalling_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_moisture_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_moisture_locations",
+          "expected": [
+            "Roof slab",
+            "External walls"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Roof slab",
+              "External walls"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Roof slab",
+              "External walls"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_moisture_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_seepage_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_seepage_locations",
+          "expected": [
+            "Basement"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Basement"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Basement"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_seepage_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_white_deposits_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_deflection_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_tilt_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        }
+      ]
+    },
+    {
+      "label": "Steel Structure",
+      "assessmentId": "69c0dc0b43fe1d0e9514035e",
+      "totalFields": 61,
+      "passedFields": 61,
+      "allPass": true,
+      "failedFieldKeys": [],
+      "fields": [
+        {
+          "key": "q10_steel_fire_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11_steel_vibration_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11_steel_vibration_sources",
+          "expected": [
+            "Heavy machinery"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Heavy machinery"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Heavy machinery"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11_steel_vibration_sources_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q12_steel_ground_issues_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q12_steel_soil_type",
+          "expected": "Clayey",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Clayey"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Clayey"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q12_steel_soil_type_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q13_steel_disaster_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q14_steel_expert_intervention_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q14_steel_expert_intervention_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q14_steel_expert_intervention_types",
+          "expected": [
+            "Anti-corrosion coating"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Anti-corrosion coating"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Anti-corrosion coating"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q14_steel_subscribe_details",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_steel_age",
+          "expected": "15",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "15"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "15"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_steel_ageRange",
+          "expected": "11-20 years",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "11-20 years"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "11-20 years"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_steel_city",
+          "expected": "Bengaluru",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Bengaluru"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Bengaluru"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_steel_city_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_steel_country",
+          "expected": "India",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "India"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "India"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_steel_country_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_steel_state",
+          "expected": "Karnataka",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Karnataka"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Karnataka"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_steel_state_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_steel_storeys_above",
+          "expected": "8",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "8"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "8"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_steel_storeys_below",
+          "expected": "0",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "0"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "0"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q2_steel_usage",
+          "expected": "Commercial",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Commercial"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Commercial"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q2_steel_usage_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q3_steel_exposure_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q3_steel_exposure_type",
+          "expected": "Industrial",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Industrial"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Industrial"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_steel_floors_added",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_steel_floors_added_after",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_steel_floors_details",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_steel_heavy_machinery",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q5_structural_system",
+          "expected": "Steel Structure",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Steel Structure"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Steel Structure"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_steel_corrosion_beam_characteristics",
+          "expected": [
+            "Surface rust",
+            "Pitting"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Surface rust",
+              "Pitting"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Surface rust",
+              "Pitting"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_steel_corrosion_beam_characteristics_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_steel_corrosion_beam_locations",
+          "expected": [
+            "Flange",
+            "Web"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Flange",
+              "Web"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Flange",
+              "Web"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_steel_corrosion_beam_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_steel_corrosion_column_characteristics",
+          "expected": [
+            "Surface rust"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Surface rust"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Surface rust"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_steel_corrosion_column_characteristics_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_steel_corrosion_column_locations",
+          "expected": [
+            "Base plate",
+            "Mid-height"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Base plate",
+              "Mid-height"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Base plate",
+              "Mid-height"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_steel_corrosion_column_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_steel_corrosion_elements",
+          "expected": [
+            "Steel beams",
+            "Steel columns"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Steel beams",
+              "Steel columns"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Steel beams",
+              "Steel columns"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_steel_corrosion_elements_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_steel_corrosion_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_steel_beam_deflection_elements",
+          "expected": [
+            "Steel beams"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Steel beams"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Steel beams"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_steel_beam_deflection_elements_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_steel_buckling_elements",
+          "expected": [
+            "Bracing"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Bracing"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Bracing"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_steel_buckling_elements_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_steel_deformation_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_steel_deformation_types",
+          "expected": [
+            "Deflection",
+            "Buckling"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Deflection",
+              "Buckling"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Deflection",
+              "Buckling"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_steel_deformation_types_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_steel_connections_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_steel_connections_types",
+          "expected": [
+            "Loose bolts",
+            "Weld cracks"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Loose bolts",
+              "Weld cracks"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Loose bolts",
+              "Weld cracks"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_steel_connections_types_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_steel_loose_bolts_locations",
+          "expected": [
+            "Beam-column joints"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Beam-column joints"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Beam-column joints"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_steel_loose_bolts_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_steel_weld_cracks_locations",
+          "expected": [
+            "Gusset plates"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Gusset plates"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Gusset plates"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_steel_weld_cracks_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_steel_coating_elements",
+          "expected": [
+            "Steel beams"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Steel beams"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Steel beams"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_steel_coating_elements_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_steel_coating_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_steel_coating_types",
+          "expected": [
+            "Paint peeling",
+            "No coating"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Paint peeling",
+              "No coating"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Paint peeling",
+              "No coating"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_steel_coating_types_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        }
+      ]
+    },
+    {
+      "label": "Composite Structure (RCC+Steel)",
+      "assessmentId": "69c0dc0b43fe1d0e95140361",
+      "totalFields": 70,
+      "passedFields": 70,
+      "allPass": true,
+      "failedFieldKeys": [],
+      "fields": [
+        {
+          "key": "q10a_composite_damp_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q10b_composite_white_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q10c_composite_green_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11a_composite_corrosion_elements",
+          "expected": [
+            "Steel beams"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Steel beams"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Steel beams"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11a_composite_corrosion_elements_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11a_composite_corrosion_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11a_composite_corrosion_steel_beams_characteristics",
+          "expected": [
+            "Pitting corrosion"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Pitting corrosion"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Pitting corrosion"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11a_composite_corrosion_steel_beams_characteristics_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11a_composite_corrosion_steel_beams_locations",
+          "expected": [
+            "Exposed flange"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Exposed flange"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Exposed flange"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11a_composite_corrosion_steel_beams_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11a_composite_corrosion_types",
+          "expected": [
+            "Surface rust"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Surface rust"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Surface rust"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11a_composite_corrosion_types_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q12a_composite_vibration_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q12b_composite_recurring_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q13_composite_ground_issues",
+          "expected": [],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": []
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": []
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q13_composite_ground_issues_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q13_composite_ground_issues_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q13_composite_soil_types",
+          "expected": [
+            "Sandy"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Sandy"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Sandy"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q13_composite_soil_types_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q14_composite_disaster_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q14_composite_disaster_types",
+          "expected": [],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": []
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": []
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q14_composite_disaster_types_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q14_composite_earthquake_intensity",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q15_composite_expert_intervention_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q15_composite_expert_intervention_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q15_composite_expert_intervention_types",
+          "expected": [],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": []
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": []
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q15_composite_subscribe_details",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_age",
+          "expected": "10",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "10"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "10"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_ageRange",
+          "expected": "6-10 years",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "6-10 years"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "6-10 years"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_city",
+          "expected": "New Delhi",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "New Delhi"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "New Delhi"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_city_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_country",
+          "expected": "India",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "India"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "India"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_country_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_state",
+          "expected": "Delhi",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Delhi"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Delhi"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_state_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_storeys_above",
+          "expected": "12",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "12"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "12"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_storeys_below",
+          "expected": "2",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "2"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "2"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q2_usage",
+          "expected": "Commercial",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Commercial"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Commercial"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q2_usage_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q3_exposure_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q3_exposure_type",
+          "expected": "Urban",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Urban"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Urban"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_floors_added",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_floors_added_after",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_floors_details",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_heavy_machinery",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q5_structural_system",
+          "expected": "Composite Structure (RCC + Steel)",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Composite Structure (RCC + Steel)"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Composite Structure (RCC + Steel)"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_composite_anchor_locations",
+          "expected": [],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": []
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": []
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_composite_anchor_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_composite_bent_plates_locations",
+          "expected": [],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": []
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": []
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_composite_bent_plates_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_composite_connections_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_composite_connections_types",
+          "expected": [
+            "Gaps observed between connected steel components"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Gaps observed between connected steel components"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Gaps observed between connected steel components"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_composite_connections_types_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_composite_gaps_conditions",
+          "expected": [
+            "Thermal expansion"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Thermal expansion"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Thermal expansion"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_composite_gaps_conditions_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_composite_gaps_locations",
+          "expected": [
+            "Beam-column joint"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Beam-column joint"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Beam-column joint"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_composite_gaps_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_composite_cracks_elements",
+          "expected": [
+            "Composite floor slabs"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Composite floor slabs"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Composite floor slabs"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_composite_cracks_elements_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_composite_cracks_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_composite_floor_orientations",
+          "expected": [
+            "Map/spider web pattern"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Map/spider web pattern"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Map/spider web pattern"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_composite_floor_orientations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_composite_loc_floor_slab",
+          "expected": [
+            "Centre panel",
+            "Near column"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Centre panel",
+              "Near column"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Centre panel",
+              "Near column"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_composite_loc_floor_slab_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_composite_deformation_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_composite_deformation_types",
+          "expected": [],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": []
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": []
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_composite_deformation_types_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_composite_spalling_elements",
+          "expected": [],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": []
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": []
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_composite_spalling_elements_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_composite_spalling_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        }
+      ]
+    },
+    {
+      "label": "Heritage Structure",
+      "assessmentId": "69c0dc0b43fe1d0e95140364",
+      "totalFields": 57,
+      "passedFields": 57,
+      "allPass": true,
+      "failedFieldKeys": [],
+      "fields": [
+        {
+          "key": "q10_heritage_disaster_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q10_heritage_disaster_types",
+          "expected": [
+            "Earthquake"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Earthquake"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Earthquake"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q10_heritage_disaster_types_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q10_heritage_earthquake_intensity",
+          "expected": "Low",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Low"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Low"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11_heritage_expert_intervention_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11_heritage_expert_intervention_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11_heritage_expert_intervention_types",
+          "expected": [
+            "Stone consolidation",
+            "Repointing"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Stone consolidation",
+              "Repointing"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Stone consolidation",
+              "Repointing"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11_heritage_subscribe_details",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_heritage_age",
+          "expected": "120",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "120"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "120"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_heritage_ageRange",
+          "expected": ">100 years",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ">100 years"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ">100 years"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_heritage_city",
+          "expected": "Jaipur",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Jaipur"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Jaipur"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_heritage_city_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_heritage_country",
+          "expected": "India",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "India"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "India"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_heritage_country_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_heritage_state",
+          "expected": "Rajasthan",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Rajasthan"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Rajasthan"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_heritage_state_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_heritage_storeys_above",
+          "expected": "2",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "2"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "2"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_heritage_storeys_below",
+          "expected": "0",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "0"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "0"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q2_heritage_usage",
+          "expected": "Cultural / Heritage",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Cultural / Heritage"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Cultural / Heritage"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q2_heritage_usage_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q3_heritage_exposure_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q3_heritage_exposure_type",
+          "expected": "Arid / Semi-arid",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Arid / Semi-arid"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Arid / Semi-arid"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_heritage_floors_added",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_heritage_floors_added_after",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_heritage_floors_details",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_heritage_heavy_machinery",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q5_structural_system",
+          "expected": "Heritage Structure",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Heritage Structure"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Heritage Structure"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_heritage_arch_locations",
+          "expected": [
+            "Crown",
+            "Springing line"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Crown",
+              "Springing line"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Crown",
+              "Springing line"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_heritage_arch_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_heritage_arch_orientations",
+          "expected": [
+            "Radial"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Radial"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Radial"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_heritage_arch_orientations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_heritage_crack_elements",
+          "expected": [
+            "Stone walls",
+            "Arches"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Stone walls",
+              "Arches"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Stone walls",
+              "Arches"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_heritage_crack_elements_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_heritage_cracks_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_heritage_wall_locations",
+          "expected": [
+            "Corner junction",
+            "Window lintel"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Corner junction",
+              "Window lintel"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Corner junction",
+              "Window lintel"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_heritage_wall_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_heritage_wall_orientations",
+          "expected": [
+            "Diagonal",
+            "Vertical"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Diagonal",
+              "Vertical"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Diagonal",
+              "Vertical"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_heritage_wall_orientations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_heritage_widths",
+          "expected": [
+            "0.1–0.3 mm (Fine)"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "0.1–0.3 mm (Fine)"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "0.1–0.3 mm (Fine)"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_heritage_widths_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_heritage_spalling_elements",
+          "expected": [
+            "Stone facade",
+            "Plasterwork"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Stone facade",
+              "Plasterwork"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Stone facade",
+              "Plasterwork"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_heritage_spalling_elements_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_heritage_spalling_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_heritage_spalling_locations",
+          "expected": [
+            "Sunlit face",
+            "Base"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Sunlit face",
+              "Base"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Sunlit face",
+              "Base"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_heritage_spalling_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_heritage_moisture_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_heritage_moisture_locations",
+          "expected": [
+            "Basement level",
+            "Roof parapet"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Basement level",
+              "Roof parapet"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Basement level",
+              "Roof parapet"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_heritage_moisture_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_heritage_seepage_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_heritage_white_deposits_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_heritage_white_deposits_locations",
+          "expected": [
+            "Stone walls"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Stone walls"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Stone walls"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_heritage_white_deposits_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_heritage_bio_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_heritage_bio_locations",
+          "expected": [
+            "North face",
+            "Plinth area"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "North face",
+              "Plinth area"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "North face",
+              "Plinth area"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_heritage_bio_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_heritage_bio_types",
+          "expected": [
+            "Moss",
+            "Lichen"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Moss",
+              "Lichen"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Moss",
+              "Lichen"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_heritage_bio_types_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        }
+      ]
+    },
+    {
+      "label": "Load Bearing Masonry",
+      "assessmentId": "69c0dc0b43fe1d0e95140367",
+      "totalFields": 65,
+      "passedFields": 65,
+      "allPass": true,
+      "failedFieldKeys": [],
+      "fields": [
+        {
+          "key": "q10_lb_ground_issues",
+          "expected": [
+            "Water logging during monsoon"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Water logging during monsoon"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Water logging during monsoon"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q10_lb_ground_issues_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q10_lb_ground_issues_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q10_lb_soil_type",
+          "expected": "Expansive black cotton",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Expansive black cotton"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Expansive black cotton"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q10_lb_soil_type_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q11_lb_vibration_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q12_lb_disaster_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q12_lb_disaster_types",
+          "expected": [
+            "Flood",
+            "Earthquake"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Flood",
+              "Earthquake"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Flood",
+              "Earthquake"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q12_lb_disaster_types_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q12_lb_earthquake_intensity",
+          "expected": "Low",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Low"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Low"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q13_lb_expert_intervention_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q13_lb_expert_intervention_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q13_lb_expert_intervention_types",
+          "expected": [
+            "Crack stitching",
+            "Waterproofing treatment"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Crack stitching",
+              "Waterproofing treatment"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Crack stitching",
+              "Waterproofing treatment"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q13_lb_subscribe_details",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_lb_age",
+          "expected": "50",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "50"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "50"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_lb_ageRange",
+          "expected": "41-50 years",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "41-50 years"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "41-50 years"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_lb_city",
+          "expected": "Chennai",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Chennai"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Chennai"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_lb_city_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_lb_country",
+          "expected": "India",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "India"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "India"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_lb_country_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_lb_state",
+          "expected": "Tamil Nadu",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Tamil Nadu"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Tamil Nadu"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_lb_state_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_lb_storeys_above",
+          "expected": "3",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "3"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "3"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q1_lb_storeys_below",
+          "expected": "0",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "0"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "0"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q2_lb_usage",
+          "expected": "Residential",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Residential"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Residential"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q2_lb_usage_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q3_lb_exposure_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q3_lb_exposure_type",
+          "expected": "Coastal",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Coastal"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Coastal"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_lb_floors_added",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_lb_floors_added_after",
+          "expected": "1990",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "1990"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "1990"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_lb_floors_details",
+          "expected": "One additional storey added",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "One additional storey added"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "One additional storey added"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q4_lb_heavy_machinery",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q5_structural_system",
+          "expected": "Load Bearing Masonry",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Load Bearing Masonry"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Load Bearing Masonry"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_lb_crack_elements",
+          "expected": [
+            "Exterior brick walls",
+            "Internal partition walls"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Exterior brick walls",
+              "Internal partition walls"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Exterior brick walls",
+              "Internal partition walls"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_lb_crack_elements_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_lb_cracks_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_lb_ext_wall_locations",
+          "expected": [
+            "Corner",
+            "Above door/window openings"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Corner",
+              "Above door/window openings"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Corner",
+              "Above door/window openings"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_lb_ext_wall_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_lb_ext_wall_orientations",
+          "expected": [
+            "Diagonal",
+            "Vertical"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Diagonal",
+              "Vertical"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Diagonal",
+              "Vertical"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_lb_ext_wall_orientations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_lb_int_wall_locations",
+          "expected": [
+            "Junction with floors"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Junction with floors"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Junction with floors"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_lb_int_wall_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_lb_int_wall_orientations",
+          "expected": [
+            "Horizontal"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Horizontal"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Horizontal"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_lb_int_wall_orientations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_lb_widths",
+          "expected": [
+            "0.3–1.0 mm (Medium)"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "0.3–1.0 mm (Medium)"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "0.3–1.0 mm (Medium)"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q6_lb_widths_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_lb_spalling_elements",
+          "expected": [
+            "Brick walls",
+            "Plasterwork"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Brick walls",
+              "Plasterwork"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Brick walls",
+              "Plasterwork"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_lb_spalling_elements_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_lb_spalling_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_lb_spalling_locations",
+          "expected": [
+            "Base of walls",
+            "Window sills"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Base of walls",
+              "Window sills"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Base of walls",
+              "Window sills"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q7_lb_spalling_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_lb_moisture_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_lb_moisture_locations",
+          "expected": [
+            "Ground floor walls"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Ground floor walls"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Ground floor walls"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_lb_moisture_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_lb_seepage_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_lb_seepage_locations",
+          "expected": [
+            "Roof junction"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Roof junction"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Roof junction"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_lb_seepage_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_lb_white_deposits_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_lb_white_deposits_locations",
+          "expected": [
+            "Exterior walls"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Exterior walls"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Exterior walls"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q8_lb_white_deposits_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_lb_deflection_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_lb_settlement_has",
+          "expected": "Yes",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "Yes"
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_lb_settlement_locations",
+          "expected": [
+            "Corner column base"
+          ],
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Corner column base"
+            ]
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": [
+              "Corner column base"
+            ]
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_lb_settlement_locations_other",
+          "expected": "",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": ""
+          },
+          "overallPass": true
+        },
+        {
+          "key": "q9_lb_tilt_has",
+          "expected": "No",
+          "responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "raw_responses": {
+            "exists": true,
+            "match": true,
+            "actual": "No"
+          },
+          "overallPass": true
+        }
+      ]
+    }
+  ]
+}

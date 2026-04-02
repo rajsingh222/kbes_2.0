@@ -1,26 +1,59 @@
 const express = require('express');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const https = require('https');
 const mongoose = require('mongoose');
 const geoip = require('geoip-lite');
 const Payment = require('../models/Payment');
 const User = require('../models/User');
 const router = express.Router();
 
+const COUNTRY_CODE_MAP = {
+  IN: 'India',
+  US: 'United States',
+  GB: 'United Kingdom',
+  CA: 'Canada',
+  AU: 'Australia',
+  SG: 'Singapore',
+  AE: 'UAE'
+};
+
 // Currency pricing map by assessment level (in smallest units)
 const CURRENCY_PRICING = {
   basic: {
     INR: 50000, // ₹500 (in paise)
-    USD: 3000   // $30 (in cents)
+    USD: 1000   // $10 (in cents)
   },
   advanced: {
     INR: 250000, // ₹2500 (in paise)
-    USD: 6000   // $60 (in cents)
+    USD: 5000   // $50 (in cents)
   }
 };
 
 const normalizeAssessmentLevel = (value) => {
   return String(value || 'basic').toLowerCase() === 'advanced' ? 'advanced' : 'basic';
+};
+
+const normalizeStructureType = (value) => {
+  const input = String(value || '').trim();
+  if (!input) {
+    return null;
+  }
+
+  const normalized = input.toLowerCase();
+  const mapping = {
+    'rcc structure': 'RCC Structure',
+    'rcc frame structure': 'RCC Structure',
+    'steel structure': 'Steel Structure',
+    'load bearing masonry': 'Load Bearing Masonry',
+    'composite structure': 'Composite Structure (RCC + Steel)',
+    'composite structure (rcc + steel)': 'Composite Structure (RCC + Steel)',
+    'heritage structure': 'Heritage Structure',
+    'tunnel': 'Tunnel',
+    'bridge': 'Bridge'
+  };
+
+  return mapping[normalized] || input;
 };
 
 const getDisplayAmount = (currency, amount) => {
@@ -37,11 +70,19 @@ const getDisplayAmount = (currency, amount) => {
 function getClientIP(req) {
   console.log('\n🔍 IP Detection Debug:');
   console.log('  Headers:', {
+    'x-client-ip': req.headers['x-client-ip'],
     'x-forwarded-for': req.headers['x-forwarded-for'],
     'x-real-ip': req.headers['x-real-ip'],
     'remoteAddress': req.connection?.remoteAddress,
     'req.ip': req.ip
   });
+
+  const clientIpHeader = req.headers['x-client-ip'];
+  if (clientIpHeader) {
+    const ip = String(clientIpHeader).split(',')[0].trim();
+    console.log('  ✅ Using x-client-ip:', ip);
+    return ip;
+  }
   
   // Check for common proxy headers
   const forwarded = req.headers['x-forwarded-for'];
@@ -62,8 +103,115 @@ function getClientIP(req) {
   return remoteAddr;
 }
 
+function isLocalOrPrivateIP(ip) {
+  if (!ip) {
+    return true;
+  }
+
+  const cleanIP = ip.replace(/^::ffff:/, '');
+  const octets = cleanIP.split('.').map(Number);
+  const is172Private = octets.length === 4 && octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31;
+
+  if (cleanIP === '127.0.0.1' || cleanIP === '::1') {
+    return true;
+  }
+
+  if (cleanIP.startsWith('10.') || cleanIP.startsWith('192.168.') || is172Private) {
+    return true;
+  }
+
+  return false;
+}
+
+function fetchPublicIP() {
+  return new Promise((resolve) => {
+    const req = https.get('https://api64.ipify.org?format=json', { timeout: 3500 }, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data || '{}');
+          resolve(parsed.ip || null);
+        } catch (error) {
+          resolve(null);
+        }
+      });
+    });
+
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(null);
+    });
+  });
+}
+
+function fetchJson(url) {
+  return new Promise((resolve) => {
+    const req = https.get(url, { timeout: 4500 }, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        if (res.statusCode && res.statusCode >= 400) {
+          resolve(null);
+          return;
+        }
+
+        try {
+          resolve(JSON.parse(data || '{}'));
+        } catch (error) {
+          resolve(null);
+        }
+      });
+    });
+
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(null);
+    });
+  });
+}
+
+function mapCountryCodeToName(code) {
+  if (!code) {
+    return null;
+  }
+
+  const normalized = String(code).trim().toUpperCase();
+  return COUNTRY_CODE_MAP[normalized] || normalized;
+}
+
+async function detectCountryFromExternalService(ip) {
+  const encodedIP = encodeURIComponent(ip);
+
+  const ipApiResult = await fetchJson(`https://ipapi.co/${encodedIP}/json/`);
+  if (ipApiResult) {
+    const countryFromName = ipApiResult.country_name;
+    const countryFromCode = mapCountryCodeToName(ipApiResult.country);
+    if (countryFromName || countryFromCode) {
+      return countryFromName || countryFromCode;
+    }
+  }
+
+  const ipWhoResult = await fetchJson(`https://ipwho.is/${encodedIP}`);
+  if (ipWhoResult && ipWhoResult.success && ipWhoResult.country) {
+    return ipWhoResult.country;
+  }
+
+  return null;
+}
+
 // Helper: detect country from IP address
-function detectCountryFromIP(ip) {
+async function detectCountryFromIP(ip) {
   console.log('\n🌍 Country Detection Debug:');
   console.log('  Raw IP:', ip);
   
@@ -76,33 +224,24 @@ function detectCountryFromIP(ip) {
   const cleanIP = ip.replace(/^::ffff:/, '');
   console.log('  Cleaned IP:', cleanIP);
   
-  // Skip localhost/private IPs
-  if (cleanIP === '127.0.0.1' || cleanIP === '::1') {
-    console.log('  ⚠️ LOCALHOST detected → Defaulting to India');
-    console.log('  💡 TIP: VPN doesn\'t work with localhost! Deploy to test IP detection.');
-    return 'India';
+  if (isLocalOrPrivateIP(cleanIP)) {
+    console.log('  ⚠️ Local/private IP detected; skipping GeoIP for this address');
+    return null;
+  }
+
+  console.log('  🔎 Looking up country using external IP geolocation...');
+  const externalCountry = await detectCountryFromExternalService(cleanIP);
+  if (externalCountry) {
+    console.log('  ✅ Country detected via external service:', externalCountry);
+    return externalCountry;
   }
   
-  if (cleanIP.startsWith('192.168.') || cleanIP.startsWith('10.')) {
-    console.log('  ⚠️ PRIVATE IP detected → Defaulting to India');
-    return 'India';
-  }
-  
-  console.log('  🔎 Looking up public IP in geoip database...');
+  console.log('  🔎 External lookup failed, trying local geoip database...');
   const geo = geoip.lookup(cleanIP);
   console.log('  GeoIP result:', geo);
   
   if (geo && geo.country) {
-    const countryMap = {
-      'IN': 'India',
-      'US': 'United States',
-      'GB': 'United Kingdom',
-      'CA': 'Canada',
-      'AU': 'Australia',
-      'SG': 'Singapore',
-      'AE': 'UAE'
-    };
-    const countryName = countryMap[geo.country] || geo.country;
+    const countryName = mapCountryCodeToName(geo.country);
     console.log('  ✅ Country detected:', countryName, `(${geo.country})`);
     return countryName;
   }
@@ -111,21 +250,34 @@ function detectCountryFromIP(ip) {
   return null;
 }
 
-// Helper: determine currency based on country (IP detection)
-function getCurrencyForUser(user, req) {
+// Helper: determine country/currency decision from IP and profile fallback
+async function getCurrencyDecision(user, req) {
   console.log('\n💰 Currency Determination:');
   
   // Priority 1: Try IP-based detection first
   if (req) {
-    const clientIP = getClientIP(req);
-    const detectedCountry = detectCountryFromIP(clientIP);
+    let clientIP = getClientIP(req);
+    let detectedCountry = await detectCountryFromIP(clientIP);
+
+    // Local development often resolves to localhost/private IP.
+    // In that case, resolve public egress IP so VPN geolocation can be honored.
+    if (!detectedCountry && isLocalOrPrivateIP(clientIP)) {
+      const publicIP = await fetchPublicIP();
+      if (publicIP) {
+        console.log('  🌐 Resolved public IP for geolocation:', publicIP);
+        clientIP = publicIP;
+        detectedCountry = await detectCountryFromIP(clientIP);
+      } else {
+        console.log('  ⚠️ Public IP lookup failed; continuing to fallback logic');
+      }
+    }
     
     if (detectedCountry) {
       const currency = (detectedCountry === 'India') ? 'INR' : 'USD';
       console.log('  ✅ FINAL DECISION: Currency from IP:', currency);
       console.log('  📍 Country:', detectedCountry);
-      console.log('  💵 Amount:', currency === 'INR' ? '₹2500 (250000 paise)' : '$60 (6000 cents)');
-      return currency;
+      console.log('  💵 Currency selected from country:', currency);
+      return { country: detectedCountry, currency, source: 'ip' };
     }
   }
   
@@ -133,12 +285,17 @@ function getCurrencyForUser(user, req) {
   if (user && user.country) {
     const currency = (user.country === 'India') ? 'INR' : 'USD';
     console.log('  ⚠️ Using profile country (IP failed):', currency);
-    return currency;
+    return { country: user.country, currency, source: 'profile' };
   }
   
   // Priority 3: Default to INR
   console.log('  ⚠️ Using default currency: INR');
-  return 'INR';
+  return { country: 'India', currency: 'INR', source: 'default' };
+}
+
+async function getCurrencyForUser(user, req) {
+  const decision = await getCurrencyDecision(user, req);
+  return decision.currency;
 }
 
 // Initialize Razorpay instance
@@ -177,8 +334,9 @@ const authenticateToken = (req, res, next) => {
 // Create Razorpay Order
 router.post('/create-order', authenticateToken, async (req, res) => {
   try {
-    const { assessmentId, assessmentLevel } = req.body;
+    const { assessmentId, assessmentLevel, structureType } = req.body;
     const level = normalizeAssessmentLevel(assessmentLevel || (assessmentId ? 'advanced' : 'basic'));
+    const normalizedStructureType = normalizeStructureType(structureType);
 
     // Fetch user details to determine currency
     const user = await User.findById(req.user.userId);
@@ -190,7 +348,8 @@ router.post('/create-order', authenticateToken, async (req, res) => {
     }
     
     // Determine currency and amount based on IP + user's country
-    const currency = getCurrencyForUser(user, req);
+    const currencyDecision = await getCurrencyDecision(user, req);
+    const currency = currencyDecision.currency;
     const amount = CURRENCY_PRICING[level][currency];
     const displayAmount = getDisplayAmount(currency, amount);
     
@@ -201,6 +360,7 @@ router.post('/create-order', authenticateToken, async (req, res) => {
     console.log('  Currency:', currency);
     console.log('  Amount:', amount, `(${displayAmount})`);
     console.log('  Display:', displayAmount);
+    console.log('  Country decision:', currencyDecision.country, `(source=${currencyDecision.source})`);
     console.log('=' .repeat(60) + '\n');
     
     const options = {
@@ -210,9 +370,10 @@ router.post('/create-order', authenticateToken, async (req, res) => {
       notes: {
         userId: req.user.userId,
         userEmail: req.user.email,
-        country: user.country || 'India',
+        country: currencyDecision.country,
         assessmentLevel: level,
-        assessmentId: assessmentId || ''
+        assessmentId: assessmentId || '',
+        structureType: normalizedStructureType || ''
       }
     };
     
@@ -227,8 +388,9 @@ router.post('/create-order', authenticateToken, async (req, res) => {
       currency: currency,
       status: 'created',
       metadata: {
-        country: user.country || 'India',
-        assessmentLevel: level
+        country: currencyDecision.country,
+        assessmentLevel: level,
+        structureType: normalizedStructureType
       }
     };
     if (assessmentId) {
@@ -349,7 +511,7 @@ router.get('/currency-info', authenticateToken, async (req, res) => {
       });
     }
     
-    const currency = getCurrencyForUser(user, req);
+    const currency = await getCurrencyForUser(user, req);
     const amount = CURRENCY_PRICING[level][currency];
     const displayAmount = getDisplayAmount(currency, amount);
     
@@ -374,8 +536,9 @@ router.get('/currency-info', authenticateToken, async (req, res) => {
 // Check if user has available payment for a specific assessment
 router.get('/check-available', authenticateToken, async (req, res) => {
   try {
-    const { assessmentId, assessmentLevel } = req.query;
+    const { assessmentId, assessmentLevel, structureType } = req.query;
     const level = assessmentLevel ? normalizeAssessmentLevel(assessmentLevel) : null;
+    const normalizedStructureType = normalizeStructureType(structureType);
 
     let query = {
       userId: new mongoose.Types.ObjectId(req.user.userId),
@@ -400,7 +563,50 @@ router.get('/check-available', authenticateToken, async (req, res) => {
       query.assessmentId = new mongoose.Types.ObjectId(assessmentId);
     }
 
-    const availablePayment = await Payment.findOne(query).sort({ paidAt: -1 });
+    if (level === 'basic' && normalizedStructureType) {
+      query['metadata.structureType'] = normalizedStructureType;
+    }
+
+    let availablePayment = await Payment.findOne(query).sort({ paidAt: -1 });
+
+    // Backward compatibility: older basic payments may not have structureType metadata.
+    // Bind such a payment to the first requested structure to enforce one-payment-one-structure.
+    if (!availablePayment && level === 'basic' && normalizedStructureType) {
+      const legacyQuery = {
+        userId: new mongoose.Types.ObjectId(req.user.userId),
+        status: 'success',
+        assessmentUsed: false,
+        $or: [
+          { 'metadata.structureType': { $exists: false } },
+          { 'metadata.structureType': null },
+          { 'metadata.structureType': '' }
+        ]
+      };
+
+      legacyQuery.$and = [
+        {
+          $or: [
+            { 'metadata.assessmentLevel': 'basic' },
+            { 'metadata.assessmentLevel': { $exists: false } }
+          ]
+        }
+      ];
+
+      if (assessmentId) {
+        legacyQuery.assessmentId = new mongoose.Types.ObjectId(assessmentId);
+      }
+
+      const legacyPayment = await Payment.findOne(legacyQuery).sort({ paidAt: -1 });
+      if (legacyPayment) {
+        legacyPayment.metadata = {
+          ...(legacyPayment.metadata || {}),
+          assessmentLevel: legacyPayment.metadata?.assessmentLevel || 'basic',
+          structureType: normalizedStructureType
+        };
+        await legacyPayment.save();
+        availablePayment = legacyPayment;
+      }
+    }
     
     res.json({
       success: true,
@@ -408,7 +614,8 @@ router.get('/check-available', authenticateToken, async (req, res) => {
       payment: availablePayment ? {
         id: availablePayment._id,
         amount: availablePayment.amount,
-        paidAt: availablePayment.paidAt
+        paidAt: availablePayment.paidAt,
+        structureType: availablePayment.metadata?.structureType || null
       } : null
     });
     
@@ -448,8 +655,9 @@ router.get('/history', authenticateToken, async (req, res) => {
 // Mark payment as used (called after assessment submission)
 router.post('/mark-used', authenticateToken, async (req, res) => {
   try {
-    const { assessmentId, assessmentType, assessmentLevel } = req.body;
+    const { assessmentId, assessmentType, assessmentLevel, structureType } = req.body;
     const level = assessmentLevel ? normalizeAssessmentLevel(assessmentLevel) : null;
+    const normalizedStructureType = normalizeStructureType(structureType);
     
     // Find the most recent available payment for this user
     const query = {
@@ -467,6 +675,10 @@ router.post('/mark-used', authenticateToken, async (req, res) => {
       } else {
         query['metadata.assessmentLevel'] = level;
       }
+    }
+
+    if (level === 'basic' && normalizedStructureType) {
+      query['metadata.structureType'] = normalizedStructureType;
     }
 
     const payment = await Payment.findOne(query).sort({ paidAt: -1 });

@@ -407,7 +407,12 @@ router.post('/create-order', authenticateToken, async (req, res) => {
       currency: currency,
       displayAmount: displayAmount,
       assessmentLevel: level,
-      keyId: process.env.RAZORPAY_KEY_ID
+      keyId: process.env.RAZORPAY_KEY_ID,
+      prefill: {
+        email: user.email || '',
+        // Keep contact blank to prevent stale or region-mismatched phone from being injected into checkout.
+        contact: ''
+      }
     });
     
   } catch (error) {
@@ -446,13 +451,16 @@ router.post('/verify-payment', authenticateToken, async (req, res) => {
     
     if (isAuthentic) {
       // Update payment record
-      const payment = await Payment.findOne({ razorpayOrderId: razorpay_order_id });
+      const payment = await Payment.findOne({
+        razorpayOrderId: razorpay_order_id,
+        userId: new mongoose.Types.ObjectId(req.user.userId)
+      });
       
       if (!payment) {
-        console.log('  ❌ Payment record not found in database');
-        return res.status(404).json({
+        console.log('  ❌ Payment record not found for authenticated user');
+        return res.status(403).json({
           success: false,
-          message: 'Payment record not found'
+          message: 'Payment record does not belong to authenticated user'
         });
       }
       
@@ -474,7 +482,10 @@ router.post('/verify-payment', authenticateToken, async (req, res) => {
       });
     } else {
       // Update payment as failed
-      const payment = await Payment.findOne({ razorpayOrderId: razorpay_order_id });
+      const payment = await Payment.findOne({
+        razorpayOrderId: razorpay_order_id,
+        userId: new mongoose.Types.ObjectId(req.user.userId)
+      });
       if (payment) {
         payment.status = 'failed';
         await payment.save();

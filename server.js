@@ -88,51 +88,16 @@ const Assessment = require('./models/Assessment');
 const AdvancedAssessment = require('./models/AdvancedAssessment');
 const FinalAssessment = require('./models/FinalAssessment');
 const Payment = require('./models/Payment');
-const { sendAssessmentCompletionEmail, sendAdminNotificationEmail } = require('./services/emailService');
+const { notifyRajOnSubmission } = require('./services/emailService');
 const cloudinaryService = require('./services/cloudinaryService');
 
 /**
- * Helper to asynchronously dispatch admin notification emails to office@spplindia.org & raj-it@spplindia.org
+ * Notify raj-it@spplindia.org when an assessment is submitted.
+ * Fire-and-forget — does not block the response.
  */
-function notifyAdminOnAssessmentSubmission(userDetails, structureType, reportText, pdfBuffer, assessmentId) {
-  try {
-    const name = userDetails?.name || userDetails?.userName || (userDetails?.firstName ? `${userDetails.firstName} ${userDetails.lastName || ''}`.trim() : 'Valued Client');
-    const email = userDetails?.email || userDetails?.userEmail || 'N/A';
-    const phone = userDetails?.phone || userDetails?.contact || 'N/A';
-    const organization = userDetails?.organisation || userDetails?.organization || userDetails?.q1Other || 'N/A';
-    const location = userDetails?.location || (userDetails?.city ? `${userDetails.city}, ${userDetails.country || ''}` : 'N/A');
-
-    const details = {
-      name,
-      email,
-      phone,
-      organization,
-      location,
-      structureType: structureType || 'Structural Assessment'
-    };
-
-    const id = assessmentId || ('ASSESS_' + Date.now());
-
-    if (pdfBuffer) {
-      sendAdminNotificationEmail(details, structureType, reportText, pdfBuffer, id)
-        .then(() => console.log('✅ Admin notification email dispatched to office@spplindia.org & raj-it@spplindia.org'))
-        .catch(err => console.error('⚠️ Admin notification email error:', err.message));
-    } else if (reportText) {
-      generatePdfBufferFromReport(reportText, details)
-        .then(buf => {
-          sendAdminNotificationEmail(details, structureType, reportText, buf, id)
-            .then(() => console.log('✅ Admin notification email dispatched to office@spplindia.org & raj-it@spplindia.org'))
-            .catch(err => console.error('⚠️ Admin notification email error:', err.message));
-        })
-        .catch(() => {
-          sendAdminNotificationEmail(details, structureType, reportText, null, id)
-            .then(() => console.log('✅ Admin notification email dispatched (text only)'))
-            .catch(err => console.error('⚠️ Admin notification email error:', err.message));
-        });
-    }
-  } catch (err) {
-    console.error('⚠️ notifyAdminOnAssessmentSubmission error:', err.message);
-  }
+function notifyAdminOnAssessmentSubmission(userDetails, assessmentType, reportText, pdfBuffer, assessmentId) {
+  notifyRajOnSubmission(userDetails, assessmentType, assessmentId)
+    .catch(err => console.error('⚠️ notifyRajOnSubmission error:', err.message));
 }
 
 // Import auth routes

@@ -46,6 +46,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isPaymentExempt: {
+    type: Boolean,
+    default: false
+  },
   verificationCode: {
     type: String
   },

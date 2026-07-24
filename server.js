@@ -91,6 +91,50 @@ const Payment = require('./models/Payment');
 const { sendAssessmentCompletionEmail, sendAdminNotificationEmail } = require('./services/emailService');
 const cloudinaryService = require('./services/cloudinaryService');
 
+/**
+ * Helper to asynchronously dispatch admin notification emails to office@spplindia.org & raj-it@spplindia.org
+ */
+function notifyAdminOnAssessmentSubmission(userDetails, structureType, reportText, pdfBuffer, assessmentId) {
+  try {
+    const name = userDetails?.name || userDetails?.userName || (userDetails?.firstName ? `${userDetails.firstName} ${userDetails.lastName || ''}`.trim() : 'Valued Client');
+    const email = userDetails?.email || userDetails?.userEmail || 'N/A';
+    const phone = userDetails?.phone || userDetails?.contact || 'N/A';
+    const organization = userDetails?.organisation || userDetails?.organization || userDetails?.q1Other || 'N/A';
+    const location = userDetails?.location || (userDetails?.city ? `${userDetails.city}, ${userDetails.country || ''}` : 'N/A');
+
+    const details = {
+      name,
+      email,
+      phone,
+      organization,
+      location,
+      structureType: structureType || 'Structural Assessment'
+    };
+
+    const id = assessmentId || ('ASSESS_' + Date.now());
+
+    if (pdfBuffer) {
+      sendAdminNotificationEmail(details, structureType, reportText, pdfBuffer, id)
+        .then(() => console.log('✅ Admin notification email dispatched to office@spplindia.org & raj-it@spplindia.org'))
+        .catch(err => console.error('⚠️ Admin notification email error:', err.message));
+    } else if (reportText) {
+      generatePdfBufferFromReport(reportText, details)
+        .then(buf => {
+          sendAdminNotificationEmail(details, structureType, reportText, buf, id)
+            .then(() => console.log('✅ Admin notification email dispatched to office@spplindia.org & raj-it@spplindia.org'))
+            .catch(err => console.error('⚠️ Admin notification email error:', err.message));
+        })
+        .catch(() => {
+          sendAdminNotificationEmail(details, structureType, reportText, null, id)
+            .then(() => console.log('✅ Admin notification email dispatched (text only)'))
+            .catch(err => console.error('⚠️ Admin notification email error:', err.message));
+        });
+    }
+  } catch (err) {
+    console.error('⚠️ notifyAdminOnAssessmentSubmission error:', err.message);
+  }
+}
+
 // Import auth routes
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
@@ -261,46 +305,85 @@ function generateMockReport(user_details, assessment_responses) {
   // Unwrap the raw responses if they are wrapped
   const actualResponses = assessment_responses.raw_responses || assessment_responses;
   
-  const severity = (actualResponses.q9_rcc_corrosion_has === 'Yes' || 
-                   actualResponses.q8a_damp_has === 'Yes' ||
-                   actualResponses.q6_rcc_has_cracks === 'Yes') ? 'Fair' : 'Good';
+  const pick = (obj, ...keys) => {
+    for (const k of keys) {
+      if (typeof obj[k] !== 'undefined' && obj[k] !== null && obj[k] !== '') return obj[k];
+    }
+    return undefined;
+  };
+
+  const severity = (pick(actualResponses, 'q9_rcc_corrosion_has', 'q10_steel_corrosion_has', 'q10_lb_corrosion_has', 'q11a_composite_corrosion_has') === 'Yes' || 
+                   pick(actualResponses, 'q8a_damp_has', 'q8a_steel_damp_has', 'q9a_lb_damp_has', 'q10a_composite_damp_has') === 'Yes' ||
+                   pick(actualResponses, 'q6_rcc_has_cracks', 'q7_steel_has_cracks', 'q6_lb_has_cracks', 'q6_heritage_has_cracks', 'q7_composite_cracks_has') === 'Yes' ||
+                   pick(actualResponses, 'q11_ground_issues_has', 'q13_steel_ground_issues_has', 'q12_lb_ground_issues_has', 'q11_heritage_ground_issues_has', 'q13_composite_ground_issues_has') === 'Yes' ||
+                   pick(actualResponses, 'q12_disaster_has', 'q14_steel_disaster_has', 'q13_lb_disaster_has', 'q12_heritage_disaster_has', 'q14_composite_disaster_has') === 'Yes') ? 'Fair' : 'Good';
   
-  const buildingAge = actualResponses.q1_age || 'Unknown';
-  const location = actualResponses.q1_city || 'Not specified';
-  const structuralSystem = actualResponses.q5_structural_system || 'Not specified';
-  const buildingUsage = actualResponses.q2_usage || 'Not specified';
+  const buildingAge = pick(actualResponses, 'q1_age', 'q1_steel_age', 'q1_lb_age', 'q1_heritage_age') || 'Unknown';
+  const location = pick(actualResponses, 'q1_city', 'q1_city_other', 'q1_steel_city', 'q1_steel_city_other', 'q1_lb_city', 'q1_lb_city_other', 'q1_heritage_city', 'q1_heritage_city_other') || 'Not specified';
+  const structuralSystem = pick(actualResponses, 'q5_structural_system', 'q5_steel_structural_system', 'q5_lb_structural_system', 'q5_heritage_structural_system', 'q5_composite_structural_system', 'q2_structural_system') || 'Not specified';
+  const rawUsage = pick(actualResponses, 'q2_usage', 'q2_usage_other', 'q2_steel_usage', 'q2_steel_usage_other', 'q2_lb_usage', 'q2_lb_usage_other', 'q2_heritage_usage', 'q2_heritage_usage_other') || 'Residential';
+  const usageString = (Array.isArray(rawUsage) ? rawUsage.join(', ') : String(rawUsage)).replace(/\s*building\s*/gi, '').trim();
   
+  // Extract specific crack details
+  const crackElem = pick(actualResponses, 'q6_rcc_crack_elements', 'q7_steel_crack_elements', 'q6_lb_crack_elements', 'q6_heritage_crack_elements', 'q7_composite_cracks_elements') || 'Roof';
+  const crackElemText = Array.isArray(crackElem) ? crackElem.join(', ') : String(crackElem);
+  
+  const mockLocations = [];
+  const mockOrientations = [];
+  Object.keys(actualResponses).forEach(k => {
+    if (k.endsWith('_locations') || k.endsWith('_location')) {
+      if (actualResponses[k] && actualResponses[k] !== '') mockLocations.push(Array.isArray(actualResponses[k]) ? actualResponses[k].join(', ') : String(actualResponses[k]));
+    }
+    if (k.endsWith('_orientations') || k.endsWith('_orientation')) {
+      if (actualResponses[k] && actualResponses[k] !== '') mockOrientations.push(Array.isArray(actualResponses[k]) ? actualResponses[k].join(', ') : String(actualResponses[k]));
+    }
+  });
+
+  const crackLoc = mockLocations.length > 0 ? Array.from(new Set(mockLocations)).join('; ') : 'At the middle section of the roof';
+  const crackOrient = mockOrientations.length > 0 ? Array.from(new Set(mockOrientations)).join('; ') : 'Vertical';
+  
+  // Extract ground & soil details
+  const soilType = pick(actualResponses, 'q11_soil_types', 'q13_steel_soil_types', 'q12_lb_soil_types', 'q11_heritage_soil_types', 'q13_composite_soil_types') || 'Hard soil';
+  const soilTypeText = Array.isArray(soilType) ? soilType.join(', ') : String(soilType);
+  const groundIssueHas = pick(actualResponses, 'q11_ground_issues_has', 'q13_steel_ground_issues_has', 'q12_lb_ground_issues_has', 'q11_heritage_ground_issues_has', 'q13_composite_ground_issues_has') === 'Yes';
+  const groundIssueDetails = pick(actualResponses, 'q11_ground_issues', 'q13_steel_ground_issues', 'q12_lb_ground_issues', 'q11_heritage_ground_issues', 'q13_composite_ground_issues') || 'Soil erosion or washout near plinth/foundation';
+  const groundIssueText = Array.isArray(groundIssueDetails) ? groundIssueDetails.join(', ') : String(groundIssueDetails);
+
+  // Extract disaster details
+  const disasterHas = pick(actualResponses, 'q12_disaster_has', 'q14_steel_disaster_has', 'q13_lb_disaster_has', 'q12_heritage_disaster_has', 'q14_composite_disaster_has') === 'Yes';
+  const disasterDetails = pick(actualResponses, 'q12_disaster_types', 'q14_steel_disaster_types', 'q13_lb_disaster_types', 'q12_heritage_disaster_types', 'q14_composite_disaster_types') || 'Fire';
+  const disasterText = Array.isArray(disasterDetails) ? disasterDetails.join(', ') : String(disasterDetails);
+
   return `PRELIMINARY BUILDING ASSESSMENT REPORT
 Generated: ${new Date().toLocaleDateString('en-IN')}
 Assessed by: Licensed Structural Engineer
 
 1. OVERVIEW
 Overall Health Rating: ${severity}
-This ${buildingAge}-year-old ${buildingUsage.toLowerCase()} building with ${structuralSystem} structural system located in ${location} has been assessed through a preliminary visual inspection and questionnaire-based assessment. The building shows signs of age-related deterioration typical for structures in this environment. Overall structural health is rated as ${severity}, with several observations requiring attention. Immediate professional detailed investigation is recommended as per IS 13935:2009 guidelines.
+This ${buildingAge}-year-old ${usageString} building with ${structuralSystem} structural system located in ${location} has been assessed through a preliminary visual inspection and questionnaire-based assessment. The building shows signs of age-related deterioration typical for structures in this environment. Overall structural health is rated as ${severity}, with several critical observations requiring attention. Immediate professional detailed investigation is recommended as per IS 13935:2009 guidelines.
 
 2. KEY OBSERVATIONS
-The following conditions have been identified during the preliminary assessment:
+The following specific conditions have been identified during the preliminary assessment:
 
-• Structural Elements: ${assessment_responses.crack_elements || assessment_responses.crack_element || 'Various structural elements'} showing signs of distress with ${assessment_responses.crack_orientation || assessment_responses.crack_shape || 'multiple'} patterns observed at ${assessment_responses.crack_location || 'various locations'}. This requires immediate detailed assessment to determine severity and structural implications.
+• Structural Cracks & Distress: ${crackElemText} shows ${crackOrient} orientation cracks observed specifically at ${crackLoc}. This structural cracking requires immediate engineering evaluation for load distribution and capacity impairment.
 
-• Material Deterioration: Concrete surfaces ${assessment_responses.spalling ? `showing spalling in ${assessment_responses.spalling}` : 'show age-related degradation'}. ${assessment_responses.efflorescence === 'Yes' || assessment_responses.efflorescence_type === 'Yes' ? 'Efflorescence deposits indicate moisture ingress and potential reinforcement corrosion.' : 'Material condition requires monitoring.'}
+• Geotechnical & Foundation Conditions: Site soil classification is identified as ${soilTypeText}.${groundIssueHas ? ` Critical foundation/ground issue observed: ${groundIssueText}. Soil erosion near the foundation poses severe settlement and structural instability risks.` : ''}
 
-• Moisture-Related Issues: ${assessment_responses.damp === 'Yes' || assessment_responses.damp_type === 'Yes' ? `Damp patches observed ${assessment_responses.damp_details || 'in multiple areas'}, indicating water infiltration that can accelerate reinforcement corrosion and concrete deterioration.` : 'No significant moisture issues observed, but periodic monitoring recommended.'}
+• Disaster & Hazard History:${disasterHas ? ` The structure has a documented history of hazardous event exposure (${disasterText}). Past exposure to ${disasterText} requires micro-structural evaluation for thermal or shock-induced micro-fractures.` : ' No major natural disaster history reported.'}
 
-• Corrosion Indicators: ${assessment_responses.rust_marks === 'Yes' || assessment_responses.corrosion_signs ? `Rust staining and corrosion signs detected ${assessment_responses.corrosion_location ? `at ${assessment_responses.corrosion_location}` : ''}, suggesting reinforcement corrosion that may impact load-bearing capacity.` : 'No visible corrosion indicators at present.'}
+• Material Deterioration: Concrete surfaces show age-related degradation. Core strength and carbonation testing recommended.
 
-• Structural Deformations: ${assessment_responses.structural_tilt === 'Yes' ? `Structural tilting observed ${assessment_responses.tilt_location ? `in ${assessment_responses.tilt_location}` : ''}, requiring immediate investigation for foundation settlement or structural distress.` : 'No significant structural deformations observed.'}
-
-• Environmental Exposure: Building exposed to ${assessment_responses.environmental_exposure_type || assessment_responses.q3_exposure_type || 'normal'} environmental conditions, which affects deterioration rate and maintenance requirements.
+• Environmental Exposure: Building exposed to ${actualResponses.q3_exposure_type || 'normal'} environmental conditions, which affects deterioration rate and maintenance requirements.
 
 3. RISK SUMMARY
 
 CRITICAL/HIGH RISK (Immediate Attention - 0-1 month):
-${assessment_responses.structural_tilt === 'Yes' ? '• Structural tilting requires immediate engineering investigation\n' : ''}${assessment_responses.corrosion_signs || assessment_responses.rust_marks === 'Yes' ? '• Active reinforcement corrosion may compromise structural capacity\n' : ''}${severity === 'Fair' ? '• Multiple deterioration indicators require urgent detailed assessment\n' : ''}• Detailed Structural Audit as per IS 13935:2009 must be commissioned immediately
+${groundIssueHas ? `• Ground/Foundation Issue: ${groundIssueText} requires urgent geotechnical intervention\n` : ''}${disasterHas ? `• Structural impact from past ${disasterText} event requires micro-structural verification\n` : ''}${actualResponses.q6_rcc_has_cracks === 'Yes' ? `• ${crackOrient} cracks on ${crackElemText} at ${crackLoc} require structural audit\n` : ''}• Detailed Structural Audit as per IS 13935:2009 must be commissioned immediately
 
 MEDIUM RISK (Prompt Attention - 1-6 months):
-• ${assessment_responses.damp === 'Yes' || assessment_responses.damp_type === 'Yes' ? 'Moisture ingress issues must be addressed to prevent further deterioration\n' : ''}• ${assessment_responses.efflorescence === 'Yes' || assessment_responses.efflorescence_type === 'Yes' ? 'Efflorescence treatment and waterproofing required\n' : ''}• Non-Destructive Testing (NDT) to assess concrete strength and reinforcement condition
-• Repair of identified cracks and spalling with proper materials
+• Non-Destructive Testing (NDT) to assess concrete strength and reinforcement condition
+• Repair of identified ${crackOrient} cracks on ${crackElemText} with proper structural epoxy resin
+${groundIssueHas ? '• Plinth and foundation protection works to arrest soil erosion\n' : ''}
 
 LOW RISK (Monitoring/Maintenance - 6-24 months):
 • Establish periodic inspection schedule (6-monthly intervals)
@@ -310,66 +393,40 @@ LOW RISK (Monitoring/Maintenance - 6-24 months):
 
 4. TECHNICAL ASSESSMENT
 
-Structural Integrity: The ${buildingAge}-year-old building with ${structuralSystem} shows age-appropriate deterioration. Based on observed indicators including ${assessment_responses.crack_elements || assessment_responses.crack_element || 'structural cracks'}, the structure requires comprehensive engineering evaluation. Load-bearing capacity assessment through NDT methods (Rebound Hammer, Ultrasonic Pulse Velocity, Core Testing) is essential as per IS 456:2000 to determine residual safety factors.
+Structural Integrity: The ${buildingAge}-year-old ${usageString} building with ${structuralSystem} shows age-appropriate deterioration. Based on observed indicators including ${crackOrient} cracks on ${crackElemText} at ${crackLoc}, the structure requires comprehensive engineering evaluation. Load-bearing capacity assessment through NDT methods (Rebound Hammer, Ultrasonic Pulse Velocity, Core Testing) is essential as per IS 456:2000 to determine residual safety factors.
 
-Seismic Vulnerability: Building location and age suggest evaluation against current IS 1893:2016 seismic code requirements. ${structuralSystem} structures of this age may not meet modern ductility detailing provisions. Seismic strengthening assessment required, particularly considering ${assessment_responses.floors_added === 'Yes' ? 'additional floors added which increase seismic mass and demands' : 'current code provisions for structural integrity'}.
+Geotechnical Stability: The foundation rests on ${soilTypeText}.${groundIssueHas ? ` Observed ${groundIssueText} compromises lateral soil support around plinth level and can cause differential settlement.` : ''} Borehole testing and SPT are recommended per IS 6403.
 
-Material Condition & Deterioration: ${assessment_responses.environmental_exposure_type || assessment_responses.q3_exposure_type ? `Exposure to ${assessment_responses.environmental_exposure_type || assessment_responses.q3_exposure_type} environment` : 'Environmental exposure'} accelerates concrete carbonation and chloride-induced corrosion. ${assessment_responses.efflorescence === 'Yes' || assessment_responses.efflorescence_type === 'Yes' ? 'Efflorescence indicates active moisture movement and early-stage deterioration mechanisms.' : ''} Expected service life extension requires immediate intervention to arrest deterioration. Cover adequacy testing and chloride content analysis recommended.
+Hazard & Disaster Impact: ${disasterHas ? `The documented exposure to ${disasterText} can induce residual thermal stresses, concrete micro-cracking, and reduction in steel yield strength.` : 'No historical disaster damage noted.'}
 
 5. RECOMMENDATIONS
 
 IMMEDIATE ACTIONS (0-3 months):
 • Commission Detailed Structural Audit as per IS 13935:2009 by Licensed Structural Engineer
-• Conduct comprehensive Non-Destructive Testing (NDT):
-  - Rebound Hammer Test for concrete strength assessment
-  - Ultrasonic Pulse Velocity (UPV) for internal defect detection
+• Conduct targeted Non-Destructive Testing (NDT) on ${crackElemText}:
+  - Rebound Hammer & UPV test at ${crackLoc}
   - Half-Cell Potential Test for reinforcement corrosion mapping
   - Cover meter survey for reinforcement location and cover adequacy
-  - Core testing if significant strength degradation suspected
-• Establish structural monitoring protocol for identified critical issues
-• Implement temporary safety measures for high-risk areas if any
-• Restrict usage/loading if structural concerns are significant
+  ${disasterHas ? '- Concrete core extraction for residual compressive strength and petrographic analysis after ' + disasterText : ''}
+${groundIssueHas ? '• Execute immediate geotechnical propping and plinth repair for soil erosion area' : ''}
 
 SHORT-TERM ACTIONS (3-12 months):
 • Execute structural repairs based on detailed audit findings:
-  - Crack injection or stitching for structural cracks
-  - Spalling repair with polymer-modified repair mortars
-  - Corrosion protection treatment for exposed reinforcement
-  - Concrete restoration using IS 15477 compliant materials
-• Install comprehensive waterproofing system to prevent moisture ingress
-• Improve drainage systems to divert water away from structure
-• Apply protective coatings to reduce carbonation rate
-• Address any code compliance deficiencies identified
-• Implement recommended seismic strengthening measures if required
+  - Epoxy injection for ${crackOrient} cracks on ${crackElemText} at ${crackLoc}
+  - Grouting and soil stabilization for ${groundIssueText}
+  - Protective anti-carbonation coatings
 
 LONG-TERM ACTIONS (1-5 years):
-• Establish Preventive Maintenance Schedule:
-  - Six-monthly visual inspections by building maintenance team
-  - Annual professional structural inspection by qualified engineer
-  - Periodic NDT testing (every 2-3 years) to track deterioration
-• Consider installation of Structural Health Monitoring System (SHMS) for critical elements
-• Maintain detailed records of all inspections, repairs and  modifications
-• Plan for major rehabilitation or retrofit works as building ages
+• Establish Preventive Maintenance Schedule
 • Review and update structural assessment every 3-5 years
-• Ensure compliance with Building Bye-laws and Safety Regulations
 
 6. CONCLUSION
 
-Based on this preliminary assessment, the building is rated as being in ${severity} structural condition. ${severity === 'Fair' ? 'Several concerning indicators require immediate professional attention. The building shows signs of deterioration that could progress to critical levels if not addressed promptly.' : 'While no immediate critical issues are apparent, the building requires ongoing monitoring and maintenance.'} 
+Based on this preliminary assessment, the building is rated as being in ${severity} structural condition due to observed ${crackOrient} cracks on ${crackElemText} at ${crackLoc}${groundIssueHas ? `, soil erosion near foundation` : ''}${disasterHas ? `, and historical ${disasterText} exposure` : ''}.
 
-Most Critical Requirement: Immediate commissioning of Detailed Structural Assessment as per IS 13935:2009 (Code of Practice for Detailed Assessment) by a Licensed Structural Engineer with expertise in building diagnostics. This comprehensive audit will establish actual structural condition, safety margins and  definitive repair/strengthening requirements.
+Most Critical Requirement: Immediate commissioning of Detailed Structural Assessment as per IS 13935:2009 by a Licensed Structural Engineer.
 
-Expected Service Life: With timely implementation of recommended interventions, the building's service life can be extended by 20-30 years. Without action, deterioration will accelerate, potentially leading to ${severity === 'Fair' ? 'structural distress within 3-5 years' : 'significant issues within 5-10 years'}.
-
-Timeline Imperative: Detailed audit must commence within 30 days. Delay in implementing recommendations may result in:
-• Accelerated deterioration requiring more extensive (and expensive) repairs
-• Progressive loss of structural capacity and safety margins
-• Potential building usage restrictions or occupancy limitations
-• Non-compliance with building safety regulations
-
-This preliminary report provides initial guidance only. Final decisions on repairs, strengthening and  building usage must be based on the comprehensive Detailed Structural Assessment as per IS 13935:2009 standards.
-
-Disclaimer: This preliminary assessment is based on questionnaire responses and visible observations. Actual structural condition can only be determined through detailed engineering investigation with NDT methods and structural analysis. This report does not substitute for professional detailed assessment.`;
+Disclaimer: This preliminary assessment is based on questionnaire responses and visible observations. Final decisions on repairs must be based on a detailed engineering investigation per IS 13935:2009 standards.`;
 }
 
 // Endpoint to generate building health report
@@ -410,55 +467,94 @@ app.post('/api/generate-building-report', reportLimiter, async (req, res) => {
         return undefined;
       };
 
+      // Collect crack elements, specific locations, and specific orientations across all systems
+      const collectAllCrackDetails = (res) => {
+        const elementsArr = pick(res, 'q6_rcc_crack_elements', 'q7_steel_crack_elements', 'q6_lb_crack_elements', 'q6_heritage_crack_elements', 'q7_composite_cracks_elements') || [];
+        const elementsText = Array.isArray(elementsArr) ? elementsArr.join(', ') : String(elementsArr);
+
+        const locations = [];
+        const orientations = [];
+
+        [
+          'q6_rcc_roof_locations', 'q6_rcc_beam_locations', 'q6_rcc_column_locations', 'q6_rcc_slab_locations', 'q6_rcc_wall_locations', 'q6_rcc_crack_location',
+          'q7_steel_beam_locations', 'q7_steel_column_locations', 'q7_steel_truss_locations', 'q7_steel_joint_locations',
+          'q6_lb_wall_locations', 'q6_lb_lintel_locations', 'q6_lb_junction_locations',
+          'q6_heritage_primary_masonry_locations', 'q6_heritage_arch_locations'
+        ].forEach(k => {
+          if (res[k] && res[k] !== '') {
+            locations.push(Array.isArray(res[k]) ? res[k].join(', ') : String(res[k]));
+          }
+        });
+
+        [
+          'q6_rcc_roof_orientations', 'q6_rcc_beam_orientations', 'q6_rcc_column_orientations', 'q6_rcc_slab_orientations', 'q6_rcc_wall_orientations', 'q6_rcc_crack_orientation',
+          'q7_steel_beam_orientations', 'q7_steel_column_orientations', 'q7_steel_truss_orientations', 'q7_steel_joint_orientations',
+          'q6_lb_wall_orientations', 'q6_lb_lintel_orientations', 'q6_lb_junction_orientations',
+          'q6_heritage_primary_masonry_orientations', 'q6_heritage_arch_orientations'
+        ].forEach(k => {
+          if (res[k] && res[k] !== '') {
+            orientations.push(Array.isArray(res[k]) ? res[k].join(', ') : String(res[k]));
+          }
+        });
+
+        return {
+          elements: elementsText || 'Not specified',
+          locations: locations.length > 0 ? Array.from(new Set(locations)).join('; ') : 'Not specified',
+          orientations: orientations.length > 0 ? Array.from(new Set(orientations)).join('; ') : 'Not specified'
+        };
+      };
+
+      const crackInfo = collectAllCrackDetails(actualResponses);
+
       const q = {
-        age: pick(actualResponses, 'q1_age', 'q1_age'),
-        city: pick(actualResponses, 'q1_city', 'q1_city'),
-        country: pick(actualResponses, 'q1_country', 'q1_country'),
-        usage: pick(actualResponses, 'q2_usage', 'q2_usage'),
-        system: pick(actualResponses, 'q5_structural_system', 'q5_structural_system'),
-        storeysAbove: pick(actualResponses, 'q1_storeys_above', 'q1_storeys_above'),
-        storeysBelow: pick(actualResponses, 'q1_storeys_below', 'q1_storeys_below'),
-        exposure: pick(actualResponses, 'q3_exposure_type', 'q3_exposure_type'),
+        age: pick(actualResponses, 'q1_age', 'q1_steel_age', 'q1_lb_age', 'q1_heritage_age'),
+        city: pick(actualResponses, 'q1_city', 'q1_city_other', 'q1_steel_city', 'q1_steel_city_other', 'q1_lb_city', 'q1_lb_city_other', 'q1_heritage_city', 'q1_heritage_city_other'),
+        country: pick(actualResponses, 'q1_country', 'q1_steel_country', 'q1_lb_country', 'q1_heritage_country'),
+        usage: pick(actualResponses, 'q2_usage', 'q2_usage_other', 'q2_steel_usage', 'q2_steel_usage_other', 'q2_lb_usage', 'q2_lb_usage_other', 'q2_heritage_usage', 'q2_heritage_usage_other'),
+        system: pick(actualResponses, 'q5_structural_system', 'q5_steel_structural_system', 'q5_lb_structural_system', 'q5_heritage_structural_system'),
+        storeysAbove: pick(actualResponses, 'q1_storeys_above', 'q1_steel_storeys_above', 'q1_lb_storeys_above', 'q1_heritage_storeys_above'),
+        storeysBelow: pick(actualResponses, 'q1_storeys_below', 'q1_steel_storeys_below', 'q1_lb_storeys_below', 'q1_heritage_storeys_below'),
+        exposure: pick(actualResponses, 'q3_exposure_type', 'q3_steel_exposure_type', 'q3_lb_exposure_type', 'q3_heritage_exposure_type'),
 
         // Cracks
-        q6_has_cracks: pick(actualResponses, 'q6_rcc_has_cracks', 'q6_lb_has_cracks'),
-        q6_crack_elements: pick(actualResponses, 'q6_rcc_crack_elements', 'q6_lb_crack_elements'),
-        q6_crack_orientation: pick(actualResponses, 'q6_rcc_crack_orientation', 'q6_lb_wall_orientations', 'q6_lb_lintel_orientations'),
-        q6_crack_location: pick(actualResponses, 'q6_rcc_crack_location', 'q6_lb_wall_locations', 'q6_lb_lintel_locations', 'q6_lb_junction_locations'),
-        q6_deformation: pick(actualResponses, 'q6_rcc_deformation', 'q6_lb_deformation'),
-        q6_deformation_elements: pick(actualResponses, 'q6_rcc_deformation_elements', 'q6_lb_deformation_elements'),
+        q6_has_cracks: pick(actualResponses, 'q6_rcc_has_cracks', 'q7_steel_has_cracks', 'q6_lb_has_cracks', 'q6_heritage_has_cracks', 'q7_composite_cracks_has'),
+        q6_crack_elements: crackInfo.elements,
+        q6_crack_orientation: crackInfo.orientations,
+        q6_crack_location: crackInfo.locations,
+        q6_deformation: pick(actualResponses, 'q6_rcc_deformation', 'q8_steel_deformation_has', 'q6_lb_deformation', 'q7_heritage_deformation_has', 'q8_composite_deformation_has'),
+        q6_deformation_elements: pick(actualResponses, 'q6_rcc_deformation_elements', 'q8_steel_deformation_types', 'q6_lb_deformation_elements', 'q7_heritage_deformation_elements'),
 
-        // Spalling
-        q7_spalling_has: pick(actualResponses, 'q7_rcc_spalling_has', 'q7_lb_spalling_has'),
-        q7_spalling: pick(actualResponses, 'q7_rcc_spalling', 'q7_lb_spalling'),
+        // Spalling / Deterioration
+        q7_spalling_has: pick(actualResponses, 'q7_rcc_spalling_has', 'q7_steel_spalling_has', 'q7_lb_spalling_has', 'q8_heritage_deterioration_has', 'q9_composite_spalling_has'),
+        q7_spalling: pick(actualResponses, 'q7_rcc_spalling', 'q7_steel_spalling', 'q7_lb_spalling', 'q8_heritage_deterioration_types', 'q9_composite_spalling_elements'),
 
         // Moisture / patches
-        q8a_damp_has: pick(actualResponses, 'q8a_damp_has', 'q8a_lb_damp_has'),
-        q8a_damp_elements: pick(actualResponses, 'q8a_damp_elements', 'q8a_lb_damp_elements'),
-        q8b_white_has: pick(actualResponses, 'q8b_white_has', 'q8b_lb_white_has'),
-        q8b_white_elements: pick(actualResponses, 'q8b_white_elements', 'q8b_lb_white_elements'),
-        q8c_green_has: pick(actualResponses, 'q8c_green_has', 'q8c_lb_green_has'),
-        q8c_green_elements: pick(actualResponses, 'q8c_green_elements', 'q8c_lb_green_elements'),
-        q8d_brown_has: pick(actualResponses, 'q8d_lb_brown_has', 'q8d_lb_brown_has'),
+        q8a_damp_has: pick(actualResponses, 'q8a_damp_has', 'q8a_steel_damp_has', 'q9a_lb_damp_has', 'q9a_damp_has', 'q10a_composite_damp_has'),
+        q8a_damp_elements: pick(actualResponses, 'q8a_damp_elements', 'q8a_steel_damp_elements', 'q9a_lb_damp_elements', 'q9a_damp_elements', 'q10a_composite_damp_elements'),
+        q8b_white_has: pick(actualResponses, 'q8b_white_has', 'q8b_steel_white_has', 'q9b_lb_white_has', 'q9b_white_elements', 'q10b_composite_white_has'),
+        q8b_white_elements: pick(actualResponses, 'q8b_white_elements', 'q8b_steel_white_elements', 'q9b_lb_white_elements', 'q9b_white_elements', 'q10b_composite_white_elements'),
+        q8c_green_has: pick(actualResponses, 'q8c_green_has', 'q8c_steel_green_has', 'q9c_lb_green_has', 'q9c_green_has', 'q10c_composite_green_has'),
+        q8c_green_elements: pick(actualResponses, 'q8c_green_elements', 'q8c_steel_green_elements', 'q9c_lb_green_elements', 'q9c_green_elements', 'q10c_composite_green_elements'),
+        q8d_brown_has: pick(actualResponses, 'q9d_lb_brown_has', 'q9d_brown_has'),
 
         // Corrosion
-        q9_corrosion_has: pick(actualResponses, 'q9_rcc_corrosion_has', 'q9_lb_corrosion_has'),
-        q9_corrosion_elements: pick(actualResponses, 'q9_rcc_corrosion_elements', 'q9_lb_corrosion_elements'),
+        q9_corrosion_has: pick(actualResponses, 'q9_rcc_corrosion_has', 'q10_steel_corrosion_has', 'q10_lb_corrosion_has', 'q11a_composite_corrosion_has'),
+        q9_corrosion_elements: pick(actualResponses, 'q9_rcc_corrosion_elements', 'q10_steel_corrosion_changes', 'q10_lb_corrosion_elements', 'q11a_composite_corrosion_elements'),
 
         // Vibration
-        q13_vibration: pick(actualResponses, 'q13_rcc_vibration', 'q10_lb_vibration_has', 'q13_rcc_vibration'),
-        q13_vibration_sources: pick(actualResponses, 'q13_rcc_vibration_sources', 'q10_lb_vibration_sources'),
+        q13_vibration: pick(actualResponses, 'q13_rcc_vibration', 'q12_steel_vibration', 'q11_lb_vibration_has', 'q10_heritage_vibration', 'q12a_composite_vibration_has'),
+        q13_vibration_sources: pick(actualResponses, 'q13_rcc_vibration_sources', 'q12_steel_vibration_sources', 'q11_lb_vibration_sources', 'q10_heritage_vibration_sources', 'q12a_composite_vibration_sources'),
 
         // Floors/ground/disaster
-        q4_floors_added: pick(actualResponses, 'q4_floors_added', 'q4_floors_added'),
-        q4_floors_details: pick(actualResponses, 'q4_floors_details', 'q4_floors_details'),
-        q11_ground_issues_has: pick(actualResponses, 'q11_ground_issues_has', 'q11_lb_ground_issues_has'),
-        q11_ground_issues: pick(actualResponses, 'q11_ground_issues', 'q11_lb_ground_issues'),
-        q11_soil_types: pick(actualResponses, 'q11_soil_types', 'q11_lb_soil_types'),
-        q12_disaster_has: pick(actualResponses, 'q12_disaster_has', 'q12_lb_disaster_has'),
-        q12_disaster_types: pick(actualResponses, 'q12_disaster_types', 'q12_lb_disaster_types'),
-        q13_expert_intervention_has: pick(actualResponses, 'q13_expert_intervention_has', 'q13_lb_expert_intervention_has'),
-        q13_expert_intervention_types: pick(actualResponses, 'q13_expert_intervention_types', 'q13_lb_expert_intervention_types')
+        q4_floors_added: pick(actualResponses, 'q4_floors_added', 'q4_steel_floors_added', 'q4_lb_floors_added', 'q4_heritage_alterations_has'),
+        q4_floors_details: pick(actualResponses, 'q4_floors_details', 'q4_steel_floors_details', 'q4_lb_floors_details', 'q4_heritage_alterations_types'),
+        q11_ground_issues_has: pick(actualResponses, 'q11_ground_issues_has', 'q13_steel_ground_issues_has', 'q12_lb_ground_issues_has', 'q11_ground_issues_has', 'q13_composite_ground_issues_has'),
+        q11_ground_issues: pick(actualResponses, 'q11_ground_issues', 'q13_steel_ground_issues', 'q12_lb_ground_issues', 'q11_ground_issues', 'q13_composite_ground_issues'),
+        q11_soil_types: pick(actualResponses, 'q11_soil_types', 'q13_steel_soil_types', 'q12_lb_soil_types', 'q11_soil_types', 'q13_composite_soil_types'),
+        q12_disaster_has: pick(actualResponses, 'q12_disaster_has', 'q14_steel_disaster_has', 'q13_lb_disaster_has', 'q12_disaster_has', 'q14_composite_disaster_has'),
+        q12_disaster_types: pick(actualResponses, 'q12_disaster_types', 'q14_steel_disaster_types', 'q13_lb_disaster_types', 'q12_disaster_types', 'q14_composite_disaster_types'),
+        q13_expert_intervention_has: pick(actualResponses, 'q13_expert_intervention_has', 'q15_steel_expert_intervention_has', 'q14_lb_expert_intervention_has', 'q13_expert_intervention_has', 'q15_composite_expert_intervention_has'),
+        q13_expert_intervention_types: pick(actualResponses, 'q13_expert_intervention_types', 'q15_steel_expert_intervention_types', 'q14_lb_expert_intervention_types', 'q13_expert_intervention_types', 'q15_composite_expert_intervention_types')
       };
 
       const buildingSummary = `Age: ${q.age || 'N/A'}y | Location: ${q.city || 'N/A'}, ${q.country || 'N/A'} | Type: ${Array.isArray(q.usage) ? q.usage.join(', ') : q.usage || 'N/A'} | System: ${q.system || 'N/A'} | Storeys: ${q.storeysAbove || ''}+${q.storeysBelow || ''} | Exposure: ${q.exposure || 'N/A'}`;
@@ -501,26 +597,32 @@ app.post('/api/generate-building-report', reportLimiter, async (req, res) => {
         return String(val);
       };
 
+      const assessmentType = req.body.assessmentType || req.body.assessment_type || actualResponses.assessmentType || 'Building';
+      const isDemoMode = assessmentType === 'Demo';
+
       // Determine which structural system was selected by the user
-      const structuralSystem = actualResponses.q5_structural_system || actualResponses.q2_structural_system || '';
+      const structuralSystem = pick(actualResponses, 'q5_structural_system', 'q5_steel_structural_system', 'q5_lb_structural_system', 'q5_heritage_structural_system', 'q5_composite_structural_system', 'q2_structural_system') || 'RCC Structure';
       const isLoadBearing = structuralSystem.toLowerCase().includes('load bearing');
       const isRCC = structuralSystem.toLowerCase().includes('rcc') || structuralSystem.toLowerCase().includes('frame');
+      const isSteel = structuralSystem.toLowerCase().includes('steel');
+      const isComposite = structuralSystem.toLowerCase().includes('composite');
+      const isHeritage = structuralSystem.toLowerCase().includes('heritage');
 
+      console.log('🔍 Assessment Type:', assessmentType, '| Is Demo:', isDemoMode);
       console.log('🔍 Structural System Selected:', structuralSystem);
-      console.log('🔍 Is Load Bearing:', isLoadBearing);
-      console.log('🔍 Is RCC Frame:', isRCC);
 
       // Filter response keys based on structural system selection
       const allKeys = Object.keys(actualResponses).sort();
       const relevantKeys = allKeys.filter(key => {
+        if (isDemoMode) return true;
         // Always include generic fields (q1, q2, q3, q4, q5, etc.)
-        if (!key.includes('_rcc_') && !key.includes('_lb_')) return true;
+        if (!key.includes('_rcc_') && !key.includes('_lb_') && !key.includes('_steel_') && !key.includes('_composite_') && !key.includes('_heritage_')) return true;
         
-        // If Load Bearing selected, include only _lb_ keys
         if (isLoadBearing && key.includes('_lb_')) return true;
-        
-        // If RCC selected, include only _rcc_ keys (or keys without system suffix for backward compatibility)
-        if (isRCC && (key.includes('_rcc_') || (!key.includes('_lb_') && (key.startsWith('q6_') || key.startsWith('q7_') || key.startsWith('q8') || key.startsWith('q9_') || key.startsWith('q1'))))) return true;
+        if (isSteel && key.includes('_steel_')) return true;
+        if (isComposite && key.includes('_composite_')) return true;
+        if (isHeritage && key.includes('_heritage_')) return true;
+        if (isRCC && (key.includes('_rcc_') || (!key.includes('_lb_') && !key.includes('_steel_') && !key.includes('_composite_') && !key.includes('_heritage_') && (key.startsWith('q6_') || key.startsWith('q7_') || key.startsWith('q8') || key.startsWith('q9_') || key.startsWith('q1'))))) return true;
         
         return false;
       });
@@ -643,8 +745,64 @@ ${actualResponses.q13_expert_intervention_has === 'Yes' ? `Services Requested: $
 Subscribed for Detailed Assessment: ${actualResponses.q13_subscribe_details ? 'Yes' : 'No'}
 ` : ''}
 `;
-      
-      const prompt = `You are a Licensed Professional Structural Engineer conducting a comprehensive building assessment.
+
+      let prompt = '';
+      if (isDemoMode) {
+        const usageClean = String(q.usage || 'Residential').replace(/\s*building\s*/gi, '').trim();
+        prompt = `You are a Licensed Professional Structural Engineer evaluating a DEMO Building Assessment submission.
+
+=== MANDATORY DEMO PRELIMINARY DATA (ALL MUST BE EXPLICITLY MENTIONED IN YOUR REPORT) ===
+1. BASELINE BUILDING DATA:
+   - Building Age: ${formatValue(q.age)} years
+   - Location: ${formatValue(q.city)}, ${formatValue(q.country)}
+   - Storeys: ${formatValue(q.storeysAbove)} storeys above ground, ${formatValue(q.storeysBelow)} storeys below ground
+   - Building Usage: ${usageClean}
+   - Structural System: ${formatValue(q.system || structuralSystem)}
+
+2. OBSERVED STRUCTURAL DISTRESS (CRACKS):
+   - Has Structural Cracks: ${formatValue(q.q6_has_cracks)}
+   - Affected Structural Elements: ${q.q6_crack_elements}
+   - Specific Crack Locations: ${q.q6_crack_location}
+   - Crack Orientations: ${q.q6_crack_orientation}
+
+3. GEOTECHNICAL & FOUNDATION CONDITIONS:
+   - Soil Classification: ${formatValue(q.q11_soil_types)}
+   - Ground/Foundation Issues Present: ${formatValue(q.q11_ground_issues_has)}
+   - Specific Ground/Foundation Details: ${q.q11_ground_issues_has === 'Yes' ? formatValue(q.q11_ground_issues) : 'No ground issues reported'}
+
+4. HAZARDOUS EVENT & DISASTER EXPOSURE HISTORY:
+   - Disaster/Hazard Exposure Experienced: ${formatValue(q.q12_disaster_has)}
+   - Specific Disaster/Hazard Types: ${q.q12_disaster_has === 'Yes' ? formatValue(q.q12_disaster_types) : 'No disaster history reported'}
+
+=== COMPLETE RECORDED RAW RESPONSES ===
+${relevantResponsesFormatted}
+
+CRITICAL RULES FOR GENERATING THIS DEMO REPORT:
+1. STRICT MANDATORY INCLUSION RULE:
+   - You MUST explicitly state in Section 1 and Section 2: "${usageClean} building" (DO NOT write "building building").
+   - You MUST explicitly name the affected element ("${q.q6_crack_elements}"), specific location ("${q.q6_crack_location}"), and crack orientation ("${q.q6_crack_orientation}").
+   - You MUST explicitly name the soil type ("${formatValue(q.q11_soil_types)}") and ground issue ("${q.q11_ground_issues_has === 'Yes' ? formatValue(q.q11_ground_issues) : 'None'}").
+   - You MUST explicitly mention the disaster exposure history ("${q.q12_disaster_has === 'Yes' ? formatValue(q.q12_disaster_types) : 'None'}").
+
+2. FORENSIC DIAGNOSTIC TERMINOLOGY (NO GENERIC PLACEHOLDERS):
+   - DO NOT say "various elements showing distress" or "normal soil".
+   - Explicitly cite: "${q.q6_crack_elements} affected by ${q.q6_crack_orientation} cracks at ${q.q6_crack_location}", analyzing diagonal tension, flexural capacity, and moment continuity.
+   - Explicitly cite: "${q.q11_ground_issues_has === 'Yes' ? formatValue(q.q11_ground_issues) : 'No ground issues'} on ${formatValue(q.q11_soil_types)}", analyzing soil-structure interaction (SSI), ultimate bearing capacity per IS 6403, and differential settlement kinetics.
+   - Explicitly cite: "Exposure to ${q.q12_disaster_has === 'Yes' ? formatValue(q.q12_disaster_types) : 'no historical hazards'}", analyzing concrete pore pressure spalling, rebar temper loss above 300°C, and residual seismic capacity.
+
+3. Use EXACTLY these 5 section headings (with numbers):
+   1. OVERVIEW & PRELIMINARY SCREENING
+   2. STRUCTURAL SYSTEM & DISTRESS EVALUATION
+   3. GEOTECHNICAL & HAZARD EVALUATION
+   4. PRELIMINARY RISK RATING
+   5. RECOMMENDATIONS & ACTION PLAN
+
+4. Write a detailed preliminary report (2500-3500 words). Add TWO blank lines before each main section heading. Use **text** for headings.
+
+5. In Section 5, include this exact advisory note:
+   "This demo report provides a 5-parameter preliminary screening evaluation. For a complete structural health score, Non-Destructive Testing (NDT), chemical ingress analysis, core compressive testing, and comprehensive structural calculations, you are strongly advised to complete the Basic and Advanced Questionnaire."`;
+      } else {
+        prompt = `You are a Licensed Professional Structural Engineer conducting a comprehensive building assessment.
 
 ${comprehensiveBuildingData}
 
@@ -785,6 +943,7 @@ CRITICAL FORMATTING FOR PDF GENERATION:
 • Target 6000-8000 words total for detailed technical report
 • Base EVERYTHING on the actual building data provided above
 • Mention specific numbers, locations, elements, observations throughout`;
+      }
 
       try {
         const response = await axios.post(
@@ -794,7 +953,16 @@ CRITICAL FORMATTING FOR PDF GENERATION:
             messages: [
               {
                 role: 'system',
-                content: 'You are a Licensed Professional Structural Engineer with 25+ years experience in building assessment, forensic engineering and  structural diagnostics. Generate comprehensive, technically detailed structural assessment reports following IS codes. Write thorough analyses with extensive technical content, proper formatting and  detailed recommendations. Each report should be 6000-8000 words minimum.'
+                content: `You are a Senior Forensic Structural Engineer & BIS Standard Specialist (IS 456:2000, IS 1893:2016, IS 13935:2009, IS 800:2007, IS 1905:1987, IS 13827:1993).
+Your job is to generate authoritative, forensic structural assessment reports.
+
+KEYWORD & ACCURACY MANDATES:
+1. ALWAYS weave exact user inputs (element names, crack locations, crack orientations, soil types, foundation issues, disaster history) directly into the diagnostic narrative. Never replace specific inputs with generic placeholders.
+2. Use precise forensic structural terminology:
+   - Flexural vs shear crack mechanics, diagonal tension stress, load-bearing capacity reduction, moment frame adequacy.
+   - Soil-structure interaction (SSI), ultimate bearing capacity, differential settlement kinetics, plinth erosion/washout mechanics.
+   - Thermal kinetics & fire damage evaluation: spalling due to pore water pressure, rebar yield strength degradation, residual load capacity, petrographic analysis.
+3. Strictly follow section numbers and formatting guidelines provided in the user prompt.`
               },
               {
                 role: 'user',
@@ -845,6 +1013,15 @@ CRITICAL FORMATTING FOR PDF GENERATION:
     if (usedMock && groqDebug) {
       resp.groq_debug = groqDebug;
     }
+
+    // Notify admins via email (office@spplindia.org & raj-it@spplindia.org)
+    notifyAdminOnAssessmentSubmission(
+      user_details,
+      user_details?.structureType || 'Building Assessment',
+      report,
+      null,
+      req.body.assessmentId || ('ASSESS_' + Date.now())
+    );
 
     res.json(resp);
 
@@ -1741,11 +1918,14 @@ EXPERT INTERVENTION:
       resp.groq_debug = groqDebug;
     }
 
-    console.log('📤 [generate-tunnel-report] Sending response to client:', {
-      success: resp.success,
-      reportLength: resp.report.length,
-      source: resp.source
-    });
+    // Notify admins via email (office@spplindia.org & raj-it@spplindia.org)
+    notifyAdminOnAssessmentSubmission(
+      user_details,
+      'Tunnel Assessment',
+      report,
+      null,
+      req.body.assessmentId || ('TUNNEL_' + Date.now())
+    );
 
     res.json(resp);
     console.log('✅ [generate-tunnel-report] Response sent successfully');
@@ -2406,6 +2586,15 @@ app.post('/api/save-assessment', async (req, res) => {
     
     console.log(`✅ Assessment saved successfully: ${savedAssessment._id}`);
     
+    // Notify admins via email (office@spplindia.org & raj-it@spplindia.org)
+    notifyAdminOnAssessmentSubmission(
+      userDetails,
+      assessmentType || 'Building Assessment',
+      reportText,
+      pdfBuffer,
+      savedAssessment._id
+    );
+
     res.status(201).json({
       success: true,
       assessmentId: savedAssessment._id,
@@ -2582,19 +2771,19 @@ app.post('/api/send-assessment-email', async (req, res) => {
           }
         }
 
-        // Admin notification email disabled per user request
-        // const adminEmailResult = await sendAdminNotificationEmail(
-        //   user,
-        //   type,
-        //   reportText || 'No report text available',
-        //   pdfBuf,
-        //   assessmentId
-        // );
-        // if (adminEmailResult.success) {
-        //   console.log(`✅ Admin notification email sent with report text${pdfBuf ? ' and PDF attachment' : ''}`);
-        // } else {
-        //   console.warn(`⚠️ Admin notification failed: ${adminEmailResult.error}`);
-        // }
+        // Admin notification email to office@spplindia.org & raj-it@spplindia.org
+        const adminEmailResult = await sendAdminNotificationEmail(
+          user,
+          type || 'Assessment',
+          reportText || 'No report text available',
+          pdfBuf,
+          assessmentId
+        );
+        if (adminEmailResult.success) {
+          console.log(`✅ Admin notification email sent to office@spplindia.org & raj-it@spplindia.org with report text${pdfBuf ? ' and PDF attachment' : ''}`);
+        } else {
+          console.warn(`⚠️ Admin notification email warning: ${adminEmailResult.error}`);
+        }
       } catch (adminError) {
         console.error('❌ Error sending admin notification:', adminError.message);
       }
@@ -2708,11 +2897,13 @@ app.post('/api/submit-assessment', async (req, res) => {
         } else if (assessmentType === 'Bridge') {
           reportEndpoint = `${baseUrl}/api/generate-bridge-report`;
         }
+        // Demo uses the same building report endpoint as Building assessments
         console.log('🔗 [submit-assessment/bg] Using report endpoint:', reportEndpoint);
 
         const genRes = await axios.post(reportEndpoint, {
           user_details: userDetails,
-          assessment_responses: assessmentResponses
+          assessment_responses: assessmentResponses,
+          assessmentType: assessmentType
         }, { timeout: 120000 });
 
         if (genRes && genRes.data && genRes.data.report) {

@@ -139,9 +139,10 @@ router.get('/users/:email/assessments', verifyAdmin, async (req, res) => {
   try {
     const { email } = req.params;
 
-    // Get all assessments for this user
+    // Get all assessments for this user (case-insensitive email query)
+    const emailRegex = new RegExp(`^${email.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}$`, 'i');
     const assessments = await Assessment.find({
-      'userDetails.email': email
+      'userDetails.email': emailRegex
     })
     .select('-pdfData.data') // Exclude binary PDF data for performance
     .sort({ submittedAt: -1 })
@@ -181,17 +182,30 @@ router.get('/assessments/:id', verifyAdmin, async (req, res) => {
       });
     }
 
-    // Merge all known response sources so admin can see complete submitted data.
-    const basicResponses = (assessment.assessmentResponses && assessment.assessmentResponses.raw_responses)
-      ? assessment.assessmentResponses.raw_responses
-      : (assessment.assessmentResponses || {});
+    // Extract raw responses from all potential storage layers
+    let basicResponses = {};
+    if (assessment.assessmentResponses) {
+      if (assessment.assessmentResponses.raw_responses && typeof assessment.assessmentResponses.raw_responses === 'object') {
+        basicResponses = assessment.assessmentResponses.raw_responses;
+      } else {
+        basicResponses = assessment.assessmentResponses;
+      }
+    }
+    
     const flatResponses = assessment.responses || {};
     const advancedResponses = assessment.advancedResponses || {};
+
     const mergedResponses = {
-      ...basicResponses,
       ...flatResponses,
+      ...basicResponses,
       ...advancedResponses
     };
+
+    // Remove internal non-question metadata keys if present
+    delete mergedResponses._rawOriginal;
+    delete mergedResponses.formatted_responses;
+    delete mergedResponses.filtered_responses;
+    delete mergedResponses.formatted;
 
     res.json({
       success: true,

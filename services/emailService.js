@@ -117,19 +117,39 @@ async function sendVerificationEmail(email, firstName, verificationCode) {
     `;
   
   try {
-    // Use SendGrid HTTP API directly (SMTP ports blocked on Render)
-    const msg = {
-      to: email,
+    // Use SendGrid HTTP API directly if key is valid
+    if (process.env.SENDGRID_API_KEY) {
+      try {
+        const msg = {
+          to: email,
+          from: {
+            email: process.env.EMAIL_FROM || 'sanrachnaprahari@gmail.com',
+            name: 'SPPL India - OSHAS'
+          },
+          subject: 'OSHAS - Email Verification Code',
+          html: htmlContent
+        };
+        await sgMail.send(msg);
+        console.log('✅ Verification email sent via SendGrid API to:', email);
+        return { success: true };
+      } catch (sgErr) {
+        console.warn('⚠️ SendGrid API failed, trying Gmail SMTP fallback:', sgErr.message);
+      }
+    }
+    
+    // Fallback to Gmail/SMTP transporter
+    const transporter = createTransporter();
+    const mailOptions = {
       from: {
-        email: process.env.EMAIL_FROM || 'admin@spplindia.org',
-        name: 'SPPL India - OSHAS'
+        name: 'SPPL India - OSHAS',
+        address: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'sanrachnaprahari@gmail.com'
       },
+      to: email,
       subject: 'OSHAS - Email Verification Code',
       html: htmlContent
     };
-    
-    await sgMail.send(msg);
-    console.log('✅ Verification email sent via HTTP API to:', email);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Verification email sent via SMTP fallback to:', email, info.messageId);
     return { success: true };
   } catch (error) {
     console.error('❌ Error sending verification email:', error.message);
@@ -498,15 +518,15 @@ async function sendAdminNotificationEmail(userDetails, assessmentType, reportTex
     // Try SMTP first
     const transporter = createTransporter();
     
-    // Admin email address
-    const adminEmail = 'sanrachnaprahari@gmail.com';
+    // Admin email addresses
+    const adminEmails = ['office@spplindia.org', 'raj-it@spplindia.org'];
     
     // Create attachment from PDF buffer
     const attachments = [];
     if (pdfBuffer) {
       const buffer = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer, 'base64');
       attachments.push({
-        filename: `Assessment_Report_${userDetails.name.replace(/\s+/g, '_')}_${Date.now()}.pdf`,
+        filename: `Assessment_Report_${(userDetails.name || 'Client').replace(/\s+/g, '_')}_${Date.now()}.pdf`,
         content: buffer,
         contentType: 'application/pdf'
       });
@@ -515,16 +535,16 @@ async function sendAdminNotificationEmail(userDetails, assessmentType, reportTex
     const mailOptions = {
       from: {
         name: 'OSHAS Portal - Admin Notification',
-        address: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'sanrachnaprahari@gmail.com'
+        address: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'office@spplindia.org'
       },
-      to: adminEmail,
-      subject: `🔔 New ${assessmentType} Assessment Submitted - ${userDetails.name}`,
+      to: adminEmails,
+      subject: `🔔 New ${assessmentType} Assessment Submitted - ${userDetails.name || 'User'}`,
       html: generateAdminEmailHTML(userDetails, assessmentType, reportText, assessmentId),
       attachments: attachments
     };
     
     const info = await transporter.sendMail(mailOptions);
-    console.log('Admin notification email sent successfully:', info.messageId);
+    console.log('✅ Admin notification email sent successfully to office@spplindia.org and raj-it@spplindia.org:', info.messageId);
     return { success: true, messageId: info.messageId };
     
   } catch (error) {
@@ -533,12 +553,12 @@ async function sendAdminNotificationEmail(userDetails, assessmentType, reportTex
     // Fallback to SendGrid HTTP API if SMTP fails
     try {
       const msg = {
-        to: 'sanrachnaprahari@gmail.com',
+        to: ['office@spplindia.org', 'raj-it@spplindia.org'],
         from: {
-          email: process.env.EMAIL_FROM || 'admin@spplindia.org',
+          email: process.env.EMAIL_FROM || 'office@spplindia.org',
           name: 'OSHAS Portal - Admin Notification'
         },
-        subject: `🔔 New ${assessmentType} Assessment Submitted - ${userDetails.name}`,
+        subject: `🔔 New ${assessmentType} Assessment Submitted - ${userDetails.name || 'User'}`,
         html: generateAdminEmailHTML(userDetails, assessmentType, reportText, assessmentId)
       };
       

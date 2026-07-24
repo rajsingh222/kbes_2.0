@@ -30,6 +30,27 @@ const CURRENCY_PRICING = {
   }
 };
 
+const EXEMPT_EMAILS = [
+  'office@spplindia.org'
+];
+
+const isUserExempt = async (userId, email) => {
+  if (email && EXEMPT_EMAILS.includes(email.toLowerCase().trim())) {
+    return true;
+  }
+  if (userId) {
+    try {
+      const user = await User.findById(userId).select('isPaymentExempt email');
+      if (user && (user.isPaymentExempt || (user.email && EXEMPT_EMAILS.includes(user.email.toLowerCase().trim())))) {
+        return true;
+      }
+    } catch (e) {
+      console.error('Error checking user exemption:', e);
+    }
+  }
+  return false;
+};
+
 const normalizeAssessmentLevel = (value) => {
   return String(value || 'basic').toLowerCase() === 'advanced' ? 'advanced' : 'basic';
 };
@@ -346,6 +367,21 @@ router.post('/create-order', authenticateToken, async (req, res) => {
         message: 'User not found'
       });
     }
+
+    // Check if user is exempt from payment
+    const exempt = await isUserExempt(req.user.userId, user.email || req.user.email);
+    if (exempt) {
+      return res.json({
+        success: true,
+        isExempt: true,
+        orderId: 'exempt_order_' + Date.now(),
+        amount: 0,
+        currency: 'INR',
+        displayAmount: 'Free (Exempt User)',
+        assessmentLevel: level,
+        keyId: process.env.RAZORPAY_KEY_ID || 'exempt_key'
+      });
+    }
     
     // Determine currency and amount based on IP + user's country
     const currencyDecision = await getCurrencyDecision(user, req);
@@ -551,6 +587,22 @@ router.get('/check-available', authenticateToken, async (req, res) => {
     const level = assessmentLevel ? normalizeAssessmentLevel(assessmentLevel) : null;
     const normalizedStructureType = normalizeStructureType(structureType);
 
+    // Check if user is exempt from payment
+    const exempt = await isUserExempt(req.user.userId, req.user.email);
+    if (exempt) {
+      return res.json({
+        success: true,
+        hasAvailablePayment: true,
+        isExempt: true,
+        payment: {
+          id: 'exempt_vip_payment',
+          amount: 0,
+          paidAt: new Date(),
+          structureType: normalizedStructureType || null
+        }
+      });
+    }
+
     let query = {
       userId: new mongoose.Types.ObjectId(req.user.userId),
       status: 'success',
@@ -669,6 +721,19 @@ router.post('/mark-used', authenticateToken, async (req, res) => {
     const { assessmentId, assessmentType, assessmentLevel, structureType } = req.body;
     const level = assessmentLevel ? normalizeAssessmentLevel(assessmentLevel) : null;
     const normalizedStructureType = normalizeStructureType(structureType);
+    
+    // Check if user is exempt from payment
+    const exempt = await isUserExempt(req.user.userId, req.user.email);
+    if (exempt) {
+      return res.json({
+        success: true,
+        message: 'Exempt user payment handled',
+        payment: {
+          id: 'exempt_vip_payment',
+          usedAt: new Date()
+        }
+      });
+    }
     
     // Find the most recent available payment for this user
     const query = {
